@@ -1,6 +1,6 @@
-package com.example.murimcultivation.network;
+package com.andymods.murimcultivation.network;
 
-import com.example.murimcultivation.MurimCultivationMod;
+import com.andymods.murimcultivation.MurimCultivationMod;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkDirection;

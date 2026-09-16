@@ -1,8 +1,8 @@
-package com.example.murimcultivation.item;
+package com.andymods.murimcultivation.item;
 
-import com.example.murimcultivation.capability.QiCapabilityProvider;
-import com.example.murimcultivation.network.NetworkHandler;
-import com.example.murimcultivation.network.SyncQiDataPacket;
+import com.andymods.murimcultivation.capability.QiCapabilityProvider;
+import com.andymods.murimcultivation.network.NetworkHandler;
+import com.andymods.murimcultivation.network.SyncQiDataPacket;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;

@@ -1,6 +1,6 @@
-package com.example.murimcultivation.network;
+package com.andymods.murimcultivation.network;
 
-import com.example.murimcultivation.capability.QiCapabilityProvider;
+import com.andymods.murimcultivation.capability.QiCapabilityProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;

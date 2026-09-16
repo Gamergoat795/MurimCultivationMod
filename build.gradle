@@ -1,88 +1,143 @@
 plugins {
+    id 'java-library'
     id 'eclipse'
     id 'idea'
     id 'maven-publish'
-    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    // Version comes from pluginManagement in settings.gradle (moddev_version in gradle.properties).
+    id 'net.neoforged.moddev'
 }
 
-version = '1.0.0'
-group = 'com.example.murimcultivation'
+// Every value below is read from gradle.properties. Nothing about the platform is
+// hardcoded here, so the properties file is the single source of truth.
+version = mod_version
+group = mod_group_id
 
 base {
-    archivesName = 'murimcultivation'
+    archivesName = mod_id
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
 
-minecraft {
-    mappings channel: 'official', version: '1.20.1'
+neoForge {
+    version = neo_version
+
+    // Declares the mod to the runtime so the dev runs load our classes.
+    mods {
+        "$mod_id" {
+            sourceSet sourceSets.main
+        }
+    }
 
     runs {
-        client {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', 'murimcultivation'
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+            gameDirectory = file('run')
+        }
 
-            mods {
-                murimcultivation {
-                    source sourceSets.main
-                }
-            }
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
         }
 
         server {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', 'murimcultivation'
-
-            mods {
-                murimcultivation {
-                    source sourceSets.main
-                }
-            }
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
         }
 
+        // ./gradlew runData regenerates models, tags, recipes and advancements
+        // into src/generated/resources, which is committed and ships in the jar.
         data {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-
-            args '--mod', 'murimcultivation', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-
-            mods {
-                murimcultivation {
-                    source sourceSets.main
-                }
-            }
+            data()
+            programArguments.addAll '--mod', mod_id,
+                    '--all',
+                    '--output', file('src/generated/resources/').absolutePath,
+                    '--existing', file('src/main/resources/').absolutePath
         }
+    }
+
+    // Puts Minecraft on the test classpath so the pure-logic tests
+    // (realm curve, breakthrough odds, codec round-trips) can run under plain JUnit.
+    unitTest {
+        enable()
+        testedMod = mods.named(mod_id)
     }
 }
 
-sourceSets.main.resources { srcDir 'src/generated/resources' }
+// Datagen output is a real resource root, not a build artifact.
+sourceSets.main.resources.srcDir 'src/generated/resources'
 
 repositories {
+    mavenCentral()
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
+    testImplementation platform('org.junit:junit-bom:5.14.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+// Expands ${...} placeholders in neoforge.mods.toml and pack.mcmeta from the
+// properties above, so mod metadata can never drift from the build config.
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
-            minecraft_version: '1.20.1',
-            forge_version: '47.3.0',
-            mod_version: version,
-            mod_id: 'murimcultivation'
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
     ]
     inputs.properties replaceProperties
 
-    filesMatching(['META-INF/mods.toml']) {
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
         expand replaceProperties
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'Specification-Title'     : mod_name,
+                'Specification-Vendor'    : mod_authors,
+                'Specification-Version'   : '1',
+                'Implementation-Title'    : mod_name,
+                'Implementation-Version'  : mod_version,
+                'Implementation-Vendor'   : mod_authors,
+        ])
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url = "file://${project.projectDir}/repo"
+        }
+    }
 }

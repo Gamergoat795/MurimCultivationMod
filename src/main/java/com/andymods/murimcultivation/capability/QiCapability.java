@@ -1,4 +1,4 @@
-package com.example.murimcultivation.capability;
+package com.andymods.murimcultivation.capability;
 
 import net.minecraft.nbt.CompoundTag;
 

@@ -1,6 +1,6 @@
-package com.example.murimcultivation.item;
+package com.andymods.murimcultivation.item;
 
-import com.example.murimcultivation.MurimCultivationMod;
+import com.andymods.murimcultivation.MurimCultivationMod;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;

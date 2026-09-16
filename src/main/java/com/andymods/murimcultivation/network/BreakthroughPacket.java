@@ -1,7 +1,7 @@
-package com.example.murimcultivation.network;
+package com.andymods.murimcultivation.network;
 
-import com.example.murimcultivation.ServerEvents;
-import com.example.murimcultivation.capability.QiCapabilityProvider;
+import com.andymods.murimcultivation.ServerEvents;
+import com.andymods.murimcultivation.capability.QiCapabilityProvider;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

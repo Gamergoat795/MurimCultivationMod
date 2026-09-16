@@ -1,10 +1,10 @@
-package com.example.murimcultivation.client;
+package com.andymods.murimcultivation.client;
 
-import com.example.murimcultivation.MurimCultivationMod;
-import com.example.murimcultivation.capability.QiCapabilityProvider;
-import com.example.murimcultivation.network.BreakthroughPacket;
-import com.example.murimcultivation.network.NetworkHandler;
-import com.example.murimcultivation.network.MeditatePacket;
+import com.andymods.murimcultivation.MurimCultivationMod;
+import com.andymods.murimcultivation.capability.QiCapabilityProvider;
+import com.andymods.murimcultivation.network.BreakthroughPacket;
+import com.andymods.murimcultivation.network.NetworkHandler;
+import com.andymods.murimcultivation.network.MeditatePacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;

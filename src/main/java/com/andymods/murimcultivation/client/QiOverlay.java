@@ -1,9 +1,9 @@
-package com.example.murimcultivation.client;
+package com.andymods.murimcultivation.client;
 
-import com.example.murimcultivation.capability.QiCapability;
-import com.example.murimcultivation.capability.QiCapabilityProvider;
-import com.example.murimcultivation.network.BreakthroughPacket;
-import com.example.murimcultivation.network.NetworkHandler;
+import com.andymods.murimcultivation.capability.QiCapability;
+import com.andymods.murimcultivation.capability.QiCapabilityProvider;
+import com.andymods.murimcultivation.network.BreakthroughPacket;
+import com.andymods.murimcultivation.network.NetworkHandler;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;

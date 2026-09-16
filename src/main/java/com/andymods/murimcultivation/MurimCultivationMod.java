@@ -1,11 +1,11 @@
-package com.example.murimcultivation;
+package com.andymods.murimcultivation;
 
-import com.example.murimcultivation.capability.QiCapability;
-import com.example.murimcultivation.capability.QiCapabilityProvider;
-import com.example.murimcultivation.client.KeyBindings;
-import com.example.murimcultivation.client.QiOverlay;
-import com.example.murimcultivation.item.ModItems;
-import com.example.murimcultivation.network.NetworkHandler;
+import com.andymods.murimcultivation.capability.QiCapability;
+import com.andymods.murimcultivation.capability.QiCapabilityProvider;
+import com.andymods.murimcultivation.client.KeyBindings;
+import com.andymods.murimcultivation.client.QiOverlay;
+import com.andymods.murimcultivation.item.ModItems;
+import com.andymods.murimcultivation.network.NetworkHandler;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
