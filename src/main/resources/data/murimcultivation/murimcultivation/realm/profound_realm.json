@@ -1,0 +1,40 @@
+{
+  "tier": 7,
+  "translation_key": "murimcultivation.realm.profound_realm",
+  "hangul": "현경",
+  "progress_per_substage": 15000,
+  "qi_capacity": 2700,
+  "qi_regen_per_second": 21.0,
+  "purity_floor": 78.0,
+  "required_open_meridians": 15,
+  "breakthrough_base_chance": 0.3,
+  "technique_tier": 6,
+  "aura_color": 16766287,
+  "attributes": [
+    {
+      "attribute": "minecraft:generic.max_health",
+      "amount": 44,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.attack_damage",
+      "amount": 16,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.movement_speed",
+      "amount": 0.26,
+      "operation": "add_multiplied_total"
+    },
+    {
+      "attribute": "minecraft:generic.armor",
+      "amount": 6,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.knockback_resistance",
+      "amount": 0.1,
+      "operation": "add_value"
+    }
+  ]
+}

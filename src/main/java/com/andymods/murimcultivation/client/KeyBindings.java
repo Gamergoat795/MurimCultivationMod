@@ -2,27 +2,33 @@ package com.andymods.murimcultivation.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
-import net.minecraftforge.client.settings.KeyConflictContext;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import org.lwjgl.glfw.GLFW;
 
-public class KeyBindings {
-    public static final String KEY_CATEGORY_MURIM = "key.category.murimcultivation.murim";
-    public static final String KEY_MEDITATE = "key.murimcultivation.meditate";
-    public static final String KEY_BREAKTHROUGH = "key.murimcultivation.breakthrough";
+@OnlyIn(Dist.CLIENT)
+public final class KeyBindings {
 
-    public static final KeyMapping MEDITATE_KEY = new KeyMapping(
-            KEY_MEDITATE,
+    public static final String CATEGORY = "key.categories.murimcultivation";
+
+    public static final KeyMapping MEDITATE = new KeyMapping(
+            "key.murimcultivation.meditate",
             KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_B,
-            KEY_CATEGORY_MURIM
-    );
+            CATEGORY);
 
-    public static final KeyMapping BREAKTHROUGH_KEY = new KeyMapping(
-            KEY_BREAKTHROUGH,
+    public static final KeyMapping BREAKTHROUGH = new KeyMapping(
+            "key.murimcultivation.breakthrough",
             KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_X,
-            KEY_CATEGORY_MURIM
-    );
+            CATEGORY);
+
+    /** Every mapping this mod owns. Registration iterates this so a new binding cannot be forgotten. */
+    public static final KeyMapping[] ALL = { MEDITATE, BREAKTHROUGH };
+
+    private KeyBindings() {
+    }
 }

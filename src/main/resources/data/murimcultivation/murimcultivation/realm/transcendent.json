@@ -1,0 +1,35 @@
+{
+  "tier": 5,
+  "translation_key": "murimcultivation.realm.transcendent",
+  "hangul": "초절정",
+  "progress_per_substage": 2500,
+  "qi_capacity": 950,
+  "qi_regen_per_second": 8.0,
+  "purity_floor": 60.0,
+  "required_open_meridians": 8,
+  "breakthrough_base_chance": 0.55,
+  "technique_tier": 4,
+  "aura_color": 15483002,
+  "attributes": [
+    {
+      "attribute": "minecraft:generic.max_health",
+      "amount": 20,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.attack_damage",
+      "amount": 7,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.movement_speed",
+      "amount": 0.15,
+      "operation": "add_multiplied_total"
+    },
+    {
+      "attribute": "minecraft:generic.armor",
+      "amount": 2,
+      "operation": "add_value"
+    }
+  ]
+}

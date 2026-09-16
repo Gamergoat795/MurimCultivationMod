@@ -1,0 +1,285 @@
+package com.andymods.murimcultivation.command;
+
+import com.andymods.murimcultivation.MurimCultivationMod;
+import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.cultivation.BreakthroughService;
+import com.andymods.murimcultivation.cultivation.CultivationData;
+import com.andymods.murimcultivation.cultivation.CultivationService;
+import com.andymods.murimcultivation.cultivation.Meridian;
+import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.cultivation.RealmProgression;
+import com.andymods.murimcultivation.cultivation.Substage;
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Optional;
+
+/**
+ * {@code /murim} — operator tooling for inspecting and forcing cultivation state.
+ *
+ * <p>This exists so that the systems built on top of it are testable without grinding: forcing a
+ * realm, emptying purity to watch a breakthrough fail, or slamming a meridian shut should all be
+ * one command away. Every subcommand acts on the executing player.
+ */
+@EventBusSubscriber(modid = MurimCultivationMod.MODID)
+public final class MurimCommand {
+
+    private static final SuggestionProvider<CommandSourceStack> REALM_SUGGESTIONS = (context, builder) ->
+            SharedSuggestionProvider.suggestResource(
+                    realmRegistry(context.getSource()).keySet().stream(), builder);
+
+    private static final SuggestionProvider<CommandSourceStack> MERIDIAN_SUGGESTIONS = (context, builder) ->
+            SharedSuggestionProvider.suggest(
+                    Arrays.stream(Meridian.values()).map(Meridian::getSerializedName), builder);
+
+    @SubscribeEvent
+    public static void onRegisterCommands(RegisterCommandsEvent event) {
+        register(event.getDispatcher());
+    }
+
+    private static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("murim")
+                .requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS));
+
+        root.then(Commands.literal("info").executes(MurimCommand::info));
+
+        root.then(Commands.literal("awaken").executes(MurimCommand::awaken));
+
+        root.then(Commands.literal("reset").executes(MurimCommand::reset));
+
+        root.then(Commands.literal("realm")
+                .then(Commands.literal("get").executes(MurimCommand::info))
+                .then(Commands.literal("set")
+                        .then(Commands.argument("realm", ResourceLocationArgument.id())
+                                .suggests(REALM_SUGGESTIONS)
+                                .executes(context -> setRealm(context, Substage.EARLY))
+                                .then(Commands.argument("substage", StringArgumentType.word())
+                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                                Arrays.stream(Substage.values()).map(Substage::getSerializedName),
+                                                builder))
+                                        .executes(context -> setRealm(context, readSubstage(context)))))));
+
+        root.then(Commands.literal("qi")
+                .then(Commands.argument("amount", DoubleArgumentType.doubleArg(0.0D))
+                        .executes(MurimCommand::setQi)));
+
+        root.then(Commands.literal("progress")
+                .then(Commands.argument("amount", DoubleArgumentType.doubleArg(0.0D))
+                        .executes(MurimCommand::setProgress)));
+
+        root.then(Commands.literal("purity")
+                .then(Commands.argument("amount", DoubleArgumentType.doubleArg(
+                                CultivationData.MIN_PURITY, CultivationData.MAX_PURITY))
+                        .executes(MurimCommand::setPurity)));
+
+        root.then(Commands.literal("meridian")
+                .then(Commands.literal("open")
+                        .then(Commands.argument("meridian", StringArgumentType.word())
+                                .suggests(MERIDIAN_SUGGESTIONS)
+                                .executes(context -> setMeridian(context, true))))
+                .then(Commands.literal("close")
+                        .then(Commands.argument("meridian", StringArgumentType.word())
+                                .suggests(MERIDIAN_SUGGESTIONS)
+                                .executes(context -> setMeridian(context, false))))
+                .then(Commands.literal("openall").executes(MurimCommand::openAllMeridians)));
+
+        root.then(Commands.literal("breakthrough").executes(MurimCommand::forceBreakthroughCheck));
+
+        dispatcher.register(root);
+    }
+
+    // --- Subcommands ------------------------------------------------------------------
+
+    private static int info(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+        Registry<Realm> registry = CultivationService.realmRegistry(player);
+        Optional<Realm> realm = CultivationService.realmOf(registry, data);
+
+        send(context, Component.literal("--- Cultivation ---"));
+        send(context, Component.literal("Awakened: " + data.isAwakened()));
+        send(context, Component.literal("Realm: ")
+                .append(realm.map(Realm::fullDisplayName).orElse(Component.literal("<none>")))
+                .append(Component.literal(" (" + data.substage().getSerializedName() + ")")));
+        send(context, Component.literal(String.format(Locale.ROOT, "Qi: %.1f / %.1f",
+                data.qi(), CultivationService.qiCapacity(registry, data))));
+        send(context, Component.literal(String.format(Locale.ROOT, "Progress: %.1f / %.1f",
+                data.progress(), CultivationService.progressForNextStep(registry, data))));
+        send(context, Component.literal(String.format(Locale.ROOT, "Purity: %.1f", data.purity())));
+        send(context, Component.literal("Meridians: " + data.openMeridianCount() + "/" + Meridian.count()
+                + " (" + data.openExtraordinaryCount() + " extraordinary)"));
+        send(context, Component.literal("Deviation: " + data.deviation().getSerializedName()
+                + (data.deviation().isActive() ? " (" + data.deviationTicks() + " ticks left)" : "")));
+        send(context, Component.literal("Breakthrough: " + BreakthroughService.check(player).name()));
+        return 1;
+    }
+
+    private static int awaken(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+        Registry<Realm> registry = CultivationService.realmRegistry(player);
+
+        Optional<Holder.Reference<Realm>> lowest = RealmProgression.lowest(registry);
+        if (lowest.isEmpty()) {
+            send(context, Component.literal("No realms are defined; check your datapack."));
+            return 0;
+        }
+
+        data.setAwakened(true);
+        CultivationService.setRealm(player, lowest.get().key(), Substage.EARLY);
+        send(context, Component.literal("Awakened at ").append(lowest.get().value().fullDisplayName()));
+        return 1;
+    }
+
+    private static int reset(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationService.data(player).reset();
+        CultivationService.applyRealmAttributes(player);
+        CultivationService.syncToClient(player);
+        send(context, Component.literal("Cultivation reset."));
+        return 1;
+    }
+
+    private static int setRealm(CommandContext<CommandSourceStack> context, Substage substage)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "realm");
+        Registry<Realm> registry = CultivationService.realmRegistry(player);
+        ResourceKey<Realm> key = ResourceKey.create(MurimRegistries.REALM, id);
+
+        if (registry.getOptional(key).isEmpty()) {
+            send(context, Component.literal("Unknown realm: " + id));
+            return 0;
+        }
+
+        CultivationService.data(player).setAwakened(true);
+        CultivationService.setRealm(player, key, substage);
+        send(context, Component.literal("Realm set to " + id + " (" + substage.getSerializedName() + ")"));
+        return 1;
+    }
+
+    private static int setQi(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        double amount = DoubleArgumentType.getDouble(context, "amount");
+        CultivationData data = CultivationService.data(player);
+        data.setQi(amount, CultivationService.qiCapacity(player));
+        CultivationService.syncValuesToClient(player);
+        send(context, Component.literal(String.format(Locale.ROOT, "Qi set to %.1f", data.qi())));
+        return 1;
+    }
+
+    private static int setProgress(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+        data.setProgress(DoubleArgumentType.getDouble(context, "amount"));
+        // Banking progress can immediately clear one or more substages.
+        CultivationService.advanceSubstages(player);
+        CultivationService.syncValuesToClient(player);
+        send(context, Component.literal(String.format(Locale.ROOT, "Progress set to %.1f", data.progress())));
+        return 1;
+    }
+
+    private static int setPurity(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+        data.setPurity(DoubleArgumentType.getDouble(context, "amount"));
+        CultivationService.syncValuesToClient(player);
+        send(context, Component.literal(String.format(Locale.ROOT, "Purity set to %.1f", data.purity())));
+        return 1;
+    }
+
+    private static int setMeridian(CommandContext<CommandSourceStack> context, boolean open)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        String name = StringArgumentType.getString(context, "meridian");
+        Optional<Meridian> meridian = parseMeridian(name);
+        if (meridian.isEmpty()) {
+            send(context, Component.literal("Unknown meridian: " + name));
+            return 0;
+        }
+
+        CultivationData data = CultivationService.data(player);
+        boolean changed = open ? data.openMeridian(meridian.get()) : data.closeMeridian(meridian.get());
+        if (changed) {
+            // The meridian network moves the Qi ceiling, so re-clamp and resync.
+            CultivationService.clampQiToCapacity(player, data);
+            CultivationService.syncToClient(player);
+        }
+        send(context, Component.literal(name + (open ? " opened" : " closed")
+                + (changed ? "" : " (no change)")));
+        return 1;
+    }
+
+    private static int openAllMeridians(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+        for (Meridian meridian : Meridian.values()) {
+            data.openMeridian(meridian);
+        }
+        CultivationService.clampQiToCapacity(player, data);
+        CultivationService.syncToClient(player);
+        send(context, Component.literal("All " + Meridian.count() + " meridians opened."));
+        return 1;
+    }
+
+    private static int forceBreakthroughCheck(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        BreakthroughService.Eligibility eligibility = BreakthroughService.check(player);
+        if (!eligibility.isReady()) {
+            send(context, Component.literal("Refused: " + eligibility.name()).append(" — ")
+                    .append(eligibility.message()));
+            return 0;
+        }
+        BreakthroughService.attempt(player);
+        return 1;
+    }
+
+    // --- Helpers ----------------------------------------------------------------------
+
+    private static Substage readSubstage(CommandContext<CommandSourceStack> context) {
+        String raw = StringArgumentType.getString(context, "substage").toLowerCase(Locale.ROOT);
+        return Arrays.stream(Substage.values())
+                .filter(substage -> substage.getSerializedName().equals(raw))
+                .findFirst()
+                .orElse(Substage.EARLY);
+    }
+
+    private static Optional<Meridian> parseMeridian(String name) {
+        String normalized = name.toLowerCase(Locale.ROOT);
+        return Arrays.stream(Meridian.values())
+                .filter(meridian -> meridian.getSerializedName().equals(normalized))
+                .findFirst();
+    }
+
+    private static Registry<Realm> realmRegistry(CommandSourceStack source) {
+        return RealmProgression.registry(source.registryAccess());
+    }
+
+    private static void send(CommandContext<CommandSourceStack> context, Component message) {
+        context.getSource().sendSuccess(() -> message, false);
+    }
+
+    private MurimCommand() {
+    }
+}

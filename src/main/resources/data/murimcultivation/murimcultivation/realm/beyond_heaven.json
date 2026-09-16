@@ -1,0 +1,40 @@
+{
+  "tier": 9,
+  "translation_key": "murimcultivation.realm.beyond_heaven",
+  "hangul": "천외천",
+  "progress_per_substage": 100000,
+  "qi_capacity": 7500,
+  "qi_regen_per_second": 55.0,
+  "purity_floor": 92.0,
+  "required_open_meridians": 20,
+  "breakthrough_base_chance": 0.1,
+  "technique_tier": 8,
+  "aura_color": 16777215,
+  "attributes": [
+    {
+      "attribute": "minecraft:generic.max_health",
+      "amount": 80,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.attack_damage",
+      "amount": 30,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.movement_speed",
+      "amount": 0.4,
+      "operation": "add_multiplied_total"
+    },
+    {
+      "attribute": "minecraft:generic.armor",
+      "amount": 10,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.knockback_resistance",
+      "amount": 0.25,
+      "operation": "add_value"
+    }
+  ]
+}

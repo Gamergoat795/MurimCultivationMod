@@ -1,87 +1,54 @@
 package com.andymods.murimcultivation;
 
-import com.andymods.murimcultivation.capability.QiCapability;
-import com.andymods.murimcultivation.capability.QiCapabilityProvider;
-import com.andymods.murimcultivation.client.KeyBindings;
-import com.andymods.murimcultivation.client.QiOverlay;
-import com.andymods.murimcultivation.item.ModItems;
-import com.andymods.murimcultivation.network.NetworkHandler;
+import com.andymods.murimcultivation.config.MurimConfig;
+import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.registry.ModAttachments;
+import com.andymods.murimcultivation.registry.ModCreativeTabs;
+import com.andymods.murimcultivation.registry.ModItems;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
-import net.minecraftforge.event.AttachCapabilitiesEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.registries.DataPackRegistryEvent;
 
 @Mod(MurimCultivationMod.MODID)
 public class MurimCultivationMod {
+
     public static final String MODID = "murimcultivation";
 
-    public MurimCultivationMod() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public MurimCultivationMod(IEventBus modBus, ModContainer modContainer) {
+        ModAttachments.register(modBus);
+        ModItems.register(modBus);
+        ModCreativeTabs.register(modBus);
 
-        ModItems.register(modEventBus);
-
-        modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener(this::registerCapabilities);
-
-        MinecraftForge.EVENT_BUS.register(this);
-        MinecraftForge.EVENT_BUS.register(new ServerEvents());
+        // SERVER, not COMMON: these values define gameplay and the client derives Qi capacity
+        // from them for the HUD. A SERVER config is synced to connecting clients, so the bar
+        // a player sees is bounded by the same numbers the server is enforcing.
+        modContainer.registerConfig(ModConfig.Type.SERVER, MurimConfig.SPEC);
     }
 
-    private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(NetworkHandler::register);
+    /** A {@link ResourceLocation} in this mod's namespace. */
+    public static ResourceLocation id(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MODID, path);
     }
 
-    private void registerCapabilities(RegisterCapabilitiesEvent event) {
-        event.register(QiCapability.class);
-    }
+    @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD)
+    public static final class ModBusEvents {
 
-    @SubscribeEvent
-    public void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
-        if (event.getObject() instanceof Player) {
-            if (!event.getObject().getCapability(QiCapabilityProvider.QI_CAPABILITY).isPresent()) {
-                event.addCapability(new ResourceLocation(MODID, "qi"), new QiCapabilityProvider());
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public void onPlayerClone(PlayerEvent.Clone event) {
-        if (event.isWasDeath()) {
-            event.getOriginal().getCapability(QiCapabilityProvider.QI_CAPABILITY).ifPresent(oldStore -> {
-                event.getEntity().getCapability(QiCapabilityProvider.QI_CAPABILITY).ifPresent(newStore -> {
-                    newStore.copyFrom(oldStore);
-                });
-            });
-        }
-    }
-
-    @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-    public static class ClientModEvents {
+        /**
+         * Registers the datapack registries. The third argument is the network codec:
+         * passing it means realms are synced to connecting clients, which the HUD needs
+         * so it can render realm names and aura colours without asking the server.
+         */
         @SubscribeEvent
-        public static void onClientSetup(FMLClientSetupEvent event) {
+        public static void registerDatapackRegistries(DataPackRegistryEvent.NewRegistry event) {
+            event.dataPackRegistry(MurimRegistries.REALM, Realm.CODEC, Realm.CODEC);
         }
 
-        @SubscribeEvent
-        public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
-            event.register(KeyBindings.MEDITATE_KEY);
-        }
-
-        @SubscribeEvent
-        public static void onRegisterGuiOverlays(RegisterGuiOverlaysEvent event) {
-            event.registerAboveAll("qi_overlay", QiOverlay.QI_OVERLAY);
+        private ModBusEvents() {
         }
     }
 }
