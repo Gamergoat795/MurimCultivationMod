@@ -1,5 +1,8 @@
-# All ${...} values are expanded by processResources from gradle.properties,
-# so this file can never drift from the build configuration.
+# Placeholders in this file are expanded by processResources from gradle.properties,
+# so mod metadata can never drift from the build configuration.
+#
+# Note: expansion runs this file through Groovy's template engine, so a bare dollar-brace
+# sequence that is not a real property reference is a build failure, even inside a comment.
 modLoader = "javafml"
 loaderVersion = "${loader_version_range}"
 license = "${mod_license}"
