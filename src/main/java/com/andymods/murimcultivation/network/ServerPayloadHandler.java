@@ -3,7 +3,7 @@ package com.andymods.murimcultivation.network;
 import com.andymods.murimcultivation.cultivation.BreakthroughService;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
-import net.minecraft.network.chat.Component;
+import com.andymods.murimcultivation.cultivation.MeditationService;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -21,23 +21,17 @@ public final class ServerPayloadHandler {
             }
 
             CultivationData data = CultivationService.data(player);
-            if (!data.isAwakened()) {
-                player.displayClientMessage(Component.translatable("murimcultivation.message.not_awakened"), true);
-                return;
-            }
-            if (data.deviation().isActive()) {
-                player.displayClientMessage(
-                        Component.translatable("murimcultivation.message.deviation_blocks_meditation"), true);
+            if (data.isMeditating()) {
+                MeditationService.stop(player, MeditationService.Interruption.MANUAL);
                 return;
             }
 
-            boolean nowMeditating = !data.isMeditating();
-            data.setMeditating(nowMeditating);
-            player.displayClientMessage(Component.translatable(nowMeditating
-                    ? "murimcultivation.message.meditation_start"
-                    : "murimcultivation.message.meditation_stop"), true);
-
-            CultivationService.syncToClient(player);
+            // Every precondition is decided here, not on the client: awakening, deviation,
+            // being airborne, in liquid or mounted all refuse with a specific reason.
+            MeditationService.StartResult result = MeditationService.start(player);
+            if (!result.started()) {
+                player.displayClientMessage(result.message(), true);
+            }
         });
     }
 

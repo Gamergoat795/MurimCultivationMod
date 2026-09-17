@@ -27,6 +27,21 @@ public final class MurimConfig {
         private final ModConfigSpec.DoubleValue meditationRampMultiplier;
         private final ModConfigSpec.DoubleValue qiPerPrimaryMeridian;
         private final ModConfigSpec.DoubleValue qiPerExtraordinaryVessel;
+        private final ModConfigSpec.DoubleValue meditationMoveTolerance;
+        private final ModConfigSpec.DoubleValue qiDensityRichBiome;
+        private final ModConfigSpec.DoubleValue qiDensityBarrenBiome;
+        private final ModConfigSpec.DoubleValue qiDensityNight;
+        private final ModConfigSpec.DoubleValue qiDensityRain;
+        private final ModConfigSpec.DoubleValue qiDensityThunder;
+        private final ModConfigSpec.DoubleValue qiDensityAltitudeBonusPerBlock;
+        private final ModConfigSpec.DoubleValue qiDensityAltitudeBonusCap;
+        private final ModConfigSpec.DoubleValue qiDensityMinimum;
+        private final ModConfigSpec.DoubleValue qiDensityMaximum;
+        private final ModConfigSpec.DoubleValue enlightenmentChancePerSecond;
+        private final ModConfigSpec.DoubleValue enlightenmentProgressSeconds;
+        private final ModConfigSpec.DoubleValue enlightenmentPurityGain;
+        private final ModConfigSpec.DoubleValue enlightenmentNearDeathChance;
+        private final ModConfigSpec.DoubleValue nearDeathHealthFraction;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -52,6 +67,82 @@ public final class MurimConfig {
                     .comment("Gain multiplier at full ramp. A long uninterrupted session should be",
                             "worth more than the same time broken into fragments.")
                     .defineInRange("meditationRampMultiplier", 2.5D, 1.0D, 100.0D);
+
+            meditationMoveTolerance = builder
+                    .comment("How far, in blocks, a meditating player may drift before the session",
+                            "is interrupted. Meditation never immobilises the player; moving away",
+                            "simply ends it. A small tolerance stops server-side position",
+                            "corrections from cancelling a legitimate sit-down.")
+                    .defineInRange("meditationMoveTolerance", 0.75D, 0.05D, 16.0D);
+
+            builder.pop();
+            builder.comment("Ambient Qi density: where you cultivate matters").push("qi_density");
+
+            qiDensityRichBiome = builder
+                    .comment("Multiplier in biomes tagged #murimcultivation:qi_rich.")
+                    .defineInRange("richBiome", 1.5D, 0.0D, 100.0D);
+
+            qiDensityBarrenBiome = builder
+                    .comment("Multiplier in biomes tagged #murimcultivation:qi_barren.")
+                    .defineInRange("barrenBiome", 0.6D, 0.0D, 100.0D);
+
+            qiDensityNight = builder
+                    .comment("Multiplier at night, the traditional hour for cultivation.")
+                    .defineInRange("night", 1.2D, 0.0D, 100.0D);
+
+            qiDensityRain = builder
+                    .comment("Multiplier while it is raining.")
+                    .defineInRange("rain", 1.1D, 0.0D, 100.0D);
+
+            qiDensityThunder = builder
+                    .comment("Multiplier during a thunderstorm, when the heavens are watching.")
+                    .defineInRange("thunder", 1.35D, 0.0D, 100.0D);
+
+            qiDensityAltitudeBonusPerBlock = builder
+                    .comment("Bonus per block of distance from sea level, in either direction.",
+                            "Mountain peaks and deep caves are both good places to cultivate.")
+                    .defineInRange("altitudeBonusPerBlock", 0.0035D, 0.0D, 1.0D);
+
+            qiDensityAltitudeBonusCap = builder
+                    .comment("Maximum total bonus from altitude, so extremes do not run away.")
+                    .defineInRange("altitudeBonusCap", 0.45D, 0.0D, 100.0D);
+
+            qiDensityMinimum = builder
+                    .comment("Floor on the combined multiplier. A poor location should be slow,",
+                            "not useless.")
+                    .defineInRange("minimum", 0.4D, 0.01D, 100.0D);
+
+            qiDensityMaximum = builder
+                    .comment("Ceiling on the combined multiplier, so a perfect spot is a real",
+                            "find rather than a different game.")
+                    .defineInRange("maximum", 3.0D, 0.01D, 1000.0D);
+
+            builder.pop();
+            builder.comment("Sudden insight").push("enlightenment");
+
+            enlightenmentChancePerSecond = builder
+                    .comment("Base chance per second of meditation of a moment of insight,",
+                            "before purity and location are applied.")
+                    .defineInRange("chancePerSecond", 0.004D, 0.0D, 1.0D);
+
+            enlightenmentProgressSeconds = builder
+                    .comment("Insight is worth this many seconds of meditation. Expressed in time",
+                            "rather than a flat number so it stays meaningful at every realm.")
+                    .defineInRange("progressSeconds", 45.0D, 0.0D, 100000.0D);
+
+            enlightenmentPurityGain = builder
+                    .comment("Foundation purity granted by a moment of insight.")
+                    .defineInRange("purityGain", 1.5D, 0.0D, 100.0D);
+
+            enlightenmentNearDeathChance = builder
+                    .comment("Chance of insight when a blow leaves the player near death.",
+                            "The classic breakthrough-mid-fight moment.")
+                    .defineInRange("nearDeathChance", 0.15D, 0.0D, 1.0D);
+
+            nearDeathHealthFraction = builder
+                    .comment("Health fraction at or below which a survived hit counts as",
+                            "a brush with death.")
+                    .defineInRange("nearDeathHealthFraction", 0.2D, 0.0D, 1.0D);
 
             builder.pop();
             builder.comment("Qi network").push("meridians");
@@ -103,6 +194,66 @@ public final class MurimConfig {
 
     public static double qiPerExtraordinaryVessel() {
         return VALUES.qiPerExtraordinaryVessel.get();
+    }
+
+    public static double meditationMoveTolerance() {
+        return VALUES.meditationMoveTolerance.get();
+    }
+
+    public static double qiDensityRichBiome() {
+        return VALUES.qiDensityRichBiome.get();
+    }
+
+    public static double qiDensityBarrenBiome() {
+        return VALUES.qiDensityBarrenBiome.get();
+    }
+
+    public static double qiDensityNight() {
+        return VALUES.qiDensityNight.get();
+    }
+
+    public static double qiDensityRain() {
+        return VALUES.qiDensityRain.get();
+    }
+
+    public static double qiDensityThunder() {
+        return VALUES.qiDensityThunder.get();
+    }
+
+    public static double qiDensityAltitudeBonusPerBlock() {
+        return VALUES.qiDensityAltitudeBonusPerBlock.get();
+    }
+
+    public static double qiDensityAltitudeBonusCap() {
+        return VALUES.qiDensityAltitudeBonusCap.get();
+    }
+
+    public static double qiDensityMinimum() {
+        return VALUES.qiDensityMinimum.get();
+    }
+
+    public static double qiDensityMaximum() {
+        return VALUES.qiDensityMaximum.get();
+    }
+
+    public static double enlightenmentChancePerSecond() {
+        return VALUES.enlightenmentChancePerSecond.get();
+    }
+
+    public static double enlightenmentProgressSeconds() {
+        return VALUES.enlightenmentProgressSeconds.get();
+    }
+
+    public static double enlightenmentPurityGain() {
+        return VALUES.enlightenmentPurityGain.get();
+    }
+
+    public static double enlightenmentNearDeathChance() {
+        return VALUES.enlightenmentNearDeathChance.get();
+    }
+
+    public static double nearDeathHealthFraction() {
+        return VALUES.nearDeathHealthFraction.get();
     }
 
     public static int cultivationTickInterval() {

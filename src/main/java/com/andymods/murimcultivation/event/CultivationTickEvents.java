@@ -4,6 +4,8 @@ import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
+import com.andymods.murimcultivation.cultivation.EnlightenmentService;
+import com.andymods.murimcultivation.cultivation.MeditationService;
 import com.andymods.murimcultivation.cultivation.Realm;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
@@ -13,8 +15,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 /**
- * The per-player cultivation heartbeat: Qi regeneration, meditation gains, and the Qi Deviation
- * countdown.
+ * The per-player cultivation heartbeat: Qi regeneration, meditation gains, insight rolls, and
+ * the Qi Deviation countdown.
  *
  * <p>All state here is read from the ticking player's own attachment, and the tick phase comes
  * from that player's own {@code tickCount}. Holding a counter field on the handler instead makes
@@ -37,22 +39,14 @@ public final class CultivationTickEvents {
             return;
         }
 
-        // Qi Deviation is counted down every tick so its duration is honest.
-        if (data.deviation().isActive()) {
-            if (data.tickDeviation()) {
-                player.displayClientMessage(
-                        Component.translatable("murimcultivation.message.deviation_cleared"), true);
-                CultivationService.syncToClient(player);
-            }
-            // A deviated cultivator cannot gather Qi; the channels are not cooperating.
-            if (data.isMeditating()) {
-                data.setMeditating(false);
-            }
+        if (tickDeviation(player, data)) {
             return;
         }
 
-        if (data.isMeditating()) {
-            data.incrementMeditationTicks();
+        // Interruption checks run every tick so movement is caught promptly, not up to a
+        // second later when the slower cultivation interval next comes round.
+        if (data.isMeditating() && !MeditationService.tickAndCheckInterruptions(player)) {
+            return;
         }
 
         int interval = MurimConfig.cultivationTickInterval();
@@ -64,8 +58,10 @@ public final class CultivationTickEvents {
         Registry<Realm> registry = CultivationService.realmRegistry(player);
 
         boolean changed = regenerateQi(player, data, registry, seconds);
+
         if (data.isMeditating()) {
-            cultivate(data, seconds);
+            MeditationService.cultivate(player, data, seconds);
+            EnlightenmentService.rollDuringMeditation(player, data, seconds);
             changed = true;
         }
 
@@ -73,6 +69,29 @@ public final class CultivationTickEvents {
             CultivationService.advanceSubstages(player);
             CultivationService.syncValuesToClient(player);
         }
+    }
+
+    /**
+     * Counts down an active Qi Deviation.
+     *
+     * @return true if the player is deviated and should skip cultivating entirely
+     */
+    private static boolean tickDeviation(ServerPlayer player, CultivationData data) {
+        if (!data.deviation().isActive()) {
+            return false;
+        }
+
+        if (data.tickDeviation()) {
+            player.displayClientMessage(
+                    Component.translatable("murimcultivation.message.deviation_cleared"), true);
+            CultivationService.syncToClient(player);
+        }
+
+        // Scrambled channels will not gather Qi.
+        if (data.isMeditating()) {
+            MeditationService.stop(player, MeditationService.Interruption.DEVIATION);
+        }
+        return true;
     }
 
     /** Passive Qi regeneration. Returns whether anything actually changed. */
@@ -84,25 +103,6 @@ public final class CultivationTickEvents {
         }
         data.addQi(CultivationService.qiRegenPerSecond(registry, data) * seconds, capacity);
         return true;
-    }
-
-    /**
-     * Converts sustained meditation into cultivation progress and foundation purity.
-     *
-     * <p>The ramp is the point: an unbroken session is worth more per second than the same
-     * total time in fragments, which is what makes sitting down to cultivate feel like a
-     * deliberate act rather than an idle tax.
-     */
-    private static void cultivate(CultivationData data, double seconds) {
-        data.addProgress(MurimConfig.meditationProgressPerSecond() * rampMultiplier(data) * seconds);
-        data.addPurity(MurimConfig.meditationPurityPerMinute() * (seconds / 60.0D));
-    }
-
-    /** Scales from 1.0 at the start of a session up to the configured maximum at full ramp. */
-    private static double rampMultiplier(CultivationData data) {
-        double rampTicks = MurimConfig.meditationRampSeconds() * TICKS_PER_SECOND;
-        double fraction = Math.min(1.0D, data.meditationTicks() / rampTicks);
-        return 1.0D + (MurimConfig.meditationRampMultiplier() - 1.0D) * fraction;
     }
 
     private CultivationTickEvents() {

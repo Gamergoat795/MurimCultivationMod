@@ -5,6 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,6 +61,7 @@ public class CultivationData {
     // Transient: never serialized, never copied on death.
     private boolean meditating;
     private int meditationTicks;
+    private Vec3 meditationAnchor;
 
     public static final Codec<CultivationData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceKey.codec(MurimRegistries.REALM).optionalFieldOf("realm").forGetter(CultivationData::realmKey),
@@ -356,6 +358,26 @@ public class CultivationData {
             this.meditationTicks = 0;
         }
         this.meditating = meditating;
+        if (!meditating) {
+            this.meditationAnchor = null;
+        }
+    }
+
+    /**
+     * Where the player settled down, or {@code null} if not meditating. Drifting away from
+     * this point interrupts the session — which is how meditation stays still without the
+     * game having to freeze the player in place.
+     */
+    public Vec3 meditationAnchor() {
+        return meditationAnchor;
+    }
+
+    public void setMeditationAnchor(Vec3 anchor) {
+        this.meditationAnchor = anchor;
+    }
+
+    public void clearMeditationAnchor() {
+        this.meditationAnchor = null;
     }
 
     /** How long the current meditation has been sustained, in ticks. Longer means faster gain. */

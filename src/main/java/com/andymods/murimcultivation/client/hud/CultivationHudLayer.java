@@ -3,6 +3,7 @@ package com.andymods.murimcultivation.client.hud;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.cultivation.QiDensity;
 import com.andymods.murimcultivation.cultivation.RealmProgression;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -13,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -39,6 +41,7 @@ public class CultivationHudLayer implements LayeredDraw.Layer {
     private static final int COLOR_TEXT = 0xFFFFFFFF;
     private static final int COLOR_PROMPT = 0xFFFFE34A;
     private static final int COLOR_DEVIATION = 0xFFFF5555;
+    private static final int COLOR_DENSITY = 0xFFB0C4DE;
 
     @Override
     public void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
@@ -93,6 +96,14 @@ public class CultivationHudLayer implements LayeredDraw.Layer {
             Component meditating = Component.translatable("murimcultivation.hud.meditating");
             guiGraphics.drawString(minecraft.font, meditating,
                     screenWidth - minecraft.font.width(meditating) - MARGIN, MARGIN + 22, COLOR_PURITY, true);
+
+            // Ambient Qi quality: tells the player whether this spot is worth sitting in.
+            double density = QiDensity.multiplierFor(minecraft.player);
+            Component location = Component.translatable("murimcultivation.hud.qi_density",
+                    Component.translatable(QiDensity.qualityOf(density).translationKey()),
+                    String.format(Locale.ROOT, "%.2fx", density));
+            guiGraphics.drawString(minecraft.font, location,
+                    screenWidth - minecraft.font.width(location) - MARGIN, MARGIN + 33, COLOR_DENSITY, true);
         }
     }
 
