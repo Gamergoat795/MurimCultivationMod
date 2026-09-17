@@ -34,7 +34,7 @@ public final class TechniqueService {
         REALM_TOO_LOW("murimcultivation.technique.refused.realm"),
         TECHNIQUE_TIER_TOO_HIGH("murimcultivation.technique.refused.tier"),
         MERIDIANS_TOO_NARROW("murimcultivation.technique.refused.meridians"),
-        WRONG_HAND("murimcultivation.technique.refused.hand"),
+        WRONG_HAND(null),
         ON_COOLDOWN("murimcultivation.technique.refused.cooldown"),
         NOT_ENOUGH_QI("murimcultivation.technique.refused.qi"),
         SUFFERING_DEVIATION("murimcultivation.technique.refused.deviation"),
@@ -52,6 +52,18 @@ public final class TechniqueService {
 
         public Component message() {
             return translationKey == null ? Component.empty() : Component.translatable(translationKey);
+        }
+
+        /**
+         * The message to show the player. A wrong grip names the grip the art actually wants,
+         * which is far more useful than "your grip is wrong" when a player has eight arts with
+         * three different requirements.
+         */
+        public Component messageFor(Technique technique) {
+            if (this == WRONG_HAND) {
+                return Component.translatable(technique.hand().refusalTranslationKey());
+            }
+            return message();
         }
     }
 
@@ -132,7 +144,7 @@ public final class TechniqueService {
         Technique technique = found.get();
         Refusal refusal = check(player, id, technique);
         if (!refusal.allowed()) {
-            player.displayClientMessage(refusal.message(), true);
+            player.displayClientMessage(refusal.messageFor(technique), true);
             return false;
         }
 
@@ -151,7 +163,7 @@ public final class TechniqueService {
         data.setTechniqueCooldown(id, cooldown);
 
         boolean fired = TechniqueBehaviours.get(technique.behaviour())
-                .map(behaviour -> behaviour.execute(player, technique, mastery))
+                .map(behaviour -> behaviour.execute(player, id, technique, mastery))
                 .orElse(false);
 
         if (!fired) {

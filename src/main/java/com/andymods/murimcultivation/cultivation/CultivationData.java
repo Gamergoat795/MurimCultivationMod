@@ -63,6 +63,7 @@ public class CultivationData {
     private int meditationTicks;
     private Vec3 meditationAnchor;
     private final Map<ResourceLocation, Integer> techniqueCooldowns = new HashMap<>();
+    private final Map<ResourceLocation, Integer> activeTechniques = new HashMap<>();
     private int selectedSlot;
 
     public static final Codec<CultivationData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -386,6 +387,57 @@ public class CultivationData {
         techniqueCooldowns.values().removeIf(ticks -> ticks <= 0);
     }
 
+    // --- Active timed techniques (transient) ------------------------------------------
+
+    /** Whether a sustained technique — Sword Force, Iron Body, Qinggong — is currently running. */
+    public boolean isTechniqueActive(ResourceLocation technique) {
+        return activeTechniques.getOrDefault(technique, 0) > 0;
+    }
+
+    public int activeTechniqueTicks(ResourceLocation technique) {
+        return activeTechniques.getOrDefault(technique, 0);
+    }
+
+    public void setTechniqueActive(ResourceLocation technique, int ticks) {
+        if (ticks <= 0) {
+            activeTechniques.remove(technique);
+        } else {
+            activeTechniques.put(technique, ticks);
+        }
+    }
+
+    public void clearTechniqueActive(ResourceLocation technique) {
+        activeTechniques.remove(technique);
+    }
+
+    public Set<ResourceLocation> activeTechniques() {
+        return Set.copyOf(activeTechniques.keySet());
+    }
+
+    public boolean hasAnyTechniqueActive() {
+        return !activeTechniques.isEmpty();
+    }
+
+    /**
+     * Counts active techniques down one tick and reports which just ended, so the caller can
+     * undo whatever they were doing. Returns an empty set on the common path.
+     */
+    public Set<ResourceLocation> tickActiveTechniques() {
+        if (activeTechniques.isEmpty()) {
+            return Set.of();
+        }
+        activeTechniques.replaceAll((technique, ticks) -> ticks - 1);
+
+        Set<ResourceLocation> expired = new LinkedHashSet<>();
+        activeTechniques.forEach((technique, ticks) -> {
+            if (ticks <= 0) {
+                expired.add(technique);
+            }
+        });
+        expired.forEach(activeTechniques::remove);
+        return expired;
+    }
+
     // --- System progression (populated in M4) -----------------------------------------
 
     public int statPoints() {
@@ -524,6 +576,7 @@ public class CultivationData {
     /** Clears all transient combat state. Used on respawn and by {@code /murim reset}. */
     public void clearTransientCombatState() {
         techniqueCooldowns.clear();
+        activeTechniques.clear();
         selectedSlot = 0;
     }
 

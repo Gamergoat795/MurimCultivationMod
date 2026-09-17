@@ -96,6 +96,10 @@ artist play differently at the same realm.
 | Iron Body | 첨신공 | 4 | Peak | any |
 | Sword Force | 검강 | 5 | Transcendent | sword |
 
+Sustained arts — Sword Force, Iron Body, Qinggong, Water Walking — run for a duration and are
+tracked as transient state, so a crash or a death can never leave you permanently buffed. Iron
+Body charges Qi every tick it is held and collapses when you run dry.
+
 Four techniques can be bound at once. Slot 1 defaults to `R`; slots 2–4 ship unbound so you
 can assign keys that do not clash with your other mods, and `C` cycles the selected slot if
 you would rather use one cast key.

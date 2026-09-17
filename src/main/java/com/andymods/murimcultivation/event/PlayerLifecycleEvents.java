@@ -3,6 +3,7 @@ package com.andymods.murimcultivation.event;
 import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
+import com.andymods.murimcultivation.technique.TechniqueBuffs;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -64,6 +65,10 @@ public final class PlayerLifecycleEvents {
     }
 
     private static void refresh(ServerPlayer player) {
+        // Technique buffs are transient, but their attribute modifiers live on the entity, so a
+        // buff interrupted by a respawn or a dimension change must have its modifiers stripped
+        // explicitly. Otherwise a player who dies mid-Sword-Force keeps the damage bonus.
+        TechniqueBuffs.clearAll(player);
         CultivationService.clampQiToCapacity(player, CultivationService.data(player));
         CultivationService.applyRealmAttributes(player);
         CultivationService.syncToClient(player);

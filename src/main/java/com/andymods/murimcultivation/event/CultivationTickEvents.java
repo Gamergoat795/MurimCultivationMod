@@ -7,6 +7,9 @@ import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.EnlightenmentService;
 import com.andymods.murimcultivation.cultivation.MeditationService;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.technique.TechniqueBehaviours;
+import com.andymods.murimcultivation.technique.TechniqueBuffs;
+import com.andymods.murimcultivation.technique.behaviour.MovementBehaviours;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,8 +43,13 @@ public final class CultivationTickEvents {
         }
 
         // Every tick, before anything can early-return: a cooldown must keep running down
-        // even while the player is deviated or has stopped meditating.
+        // even while the player is deviated or has stopped meditating, and a sustained
+        // technique must keep charging its upkeep and expiring on schedule.
         data.tickTechniqueCooldowns();
+        TechniqueBuffs.tick(player, data);
+        if (data.isTechniqueActive(TechniqueBehaviours.WATER_WALKING)) {
+            MovementBehaviours.tickWaterWalking(player);
+        }
 
         if (tickDeviation(player, data)) {
             return;

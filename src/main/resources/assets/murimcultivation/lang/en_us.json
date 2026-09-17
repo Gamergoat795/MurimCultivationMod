@@ -118,7 +118,6 @@
   "murimcultivation.technique.refused.realm": "Your realm is too low to channel this.",
   "murimcultivation.technique.refused.tier": "Your body cannot yet channel an art this advanced.",
   "murimcultivation.technique.refused.meridians": "Your meridians are too narrow for this art.",
-  "murimcultivation.technique.refused.hand": "Your grip is wrong for this art.",
   "murimcultivation.technique.refused.hand.any": "Your grip is wrong for this art.",
   "murimcultivation.technique.refused.hand.sword": "This art needs a sword in your hand.",
   "murimcultivation.technique.refused.hand.free_hand": "This art needs your hands free of a weapon.",
@@ -133,12 +132,14 @@
   "murimcultivation.technique.none_learned": "You have learned no arts yet.",
   "murimcultivation.technique.empty_slot": "Slot %s is empty.",
   "murimcultivation.technique.already_healthy": "You are unhurt; there is nothing to mend.",
-  "murimcultivation.technique.not_implemented": "%s is not finished yet.",
   "murimcultivation.manual.blank": "This manual is blank.",
   "murimcultivation.manual.not_awakened": "The characters mean nothing to you. Learn to sense Qi first.",
   "murimcultivation.manual.unknown_technique": "This manual describes an art that does not exist (%s).",
   "murimcultivation.manual.teaches": "Teaches: %s",
   "murimcultivation.manual.use": "Use to study. Consumed on reading.",
   "murimcultivation.manual.deepened": "You reread the manual on %s. (mastery %s)",
-  "murimcultivation.manual.nothing_left": "You have nothing left to learn from this manual on %s."
+  "murimcultivation.manual.nothing_left": "You have nothing left to learn from this manual on %s.",
+  "murimcultivation.technique.expired": "%s fades.",
+  "murimcultivation.technique.upkeep_failed": "Your Qi runs dry and the art collapses.",
+  "murimcultivation.technique.nothing_in_reach": "Nothing within reach."
 }
