@@ -2,7 +2,9 @@ package com.andymods.murimcultivation;
 
 import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.technique.Technique;
 import com.andymods.murimcultivation.registry.ModAttachments;
+import com.andymods.murimcultivation.registry.ModDataComponents;
 import com.andymods.murimcultivation.registry.ModCreativeTabs;
 import com.andymods.murimcultivation.registry.ModItems;
 import net.minecraft.resources.ResourceLocation;
@@ -21,6 +23,7 @@ public class MurimCultivationMod {
 
     public MurimCultivationMod(IEventBus modBus, ModContainer modContainer) {
         ModAttachments.register(modBus);
+        ModDataComponents.register(modBus);
         ModItems.register(modBus);
         ModCreativeTabs.register(modBus);
 
@@ -46,6 +49,7 @@ public class MurimCultivationMod {
         @SubscribeEvent
         public static void registerDatapackRegistries(DataPackRegistryEvent.NewRegistry event) {
             event.dataPackRegistry(MurimRegistries.REALM, Realm.CODEC, Realm.CODEC);
+            event.dataPackRegistry(MurimRegistries.TECHNIQUE, Technique.CODEC, Technique.CODEC);
         }
 
         private ModBusEvents() {

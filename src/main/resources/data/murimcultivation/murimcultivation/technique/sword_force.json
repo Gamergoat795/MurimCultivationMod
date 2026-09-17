@@ -1,0 +1,18 @@
+{
+  "tier": 5,
+  "translation_key": "murimcultivation.technique.sword_force",
+  "hangul": "검강",
+  "behaviour": "murimcultivation:sword_force",
+  "qi_cost": 60,
+  "cooldown_ticks": 240,
+  "required_realm_tier": 5,
+  "required_open_meridians": 8,
+  "hand": "sword",
+  "mastery_gain_per_use": 0.7,
+  "power": {
+    "base_damage": 9.0,
+    "damage_per_mastery": 0.22,
+    "duration_ticks": 160,
+    "radius": 1.5
+  }
+}

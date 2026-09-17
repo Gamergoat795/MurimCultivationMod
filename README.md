@@ -74,6 +74,32 @@ Fail and you suffer **Qi Deviation** in one of three severities — Minor Blocka
 or Shattered Meridian — which applies debuffs, can slam a meridian shut, and drains Progress.
 It clears with recovery pills, time, or a healer.
 
+## Martial arts
+
+Techniques are learned from manuals and improve with use. Mastery runs 0–100 with diminishing
+returns: the first uses of a new art teach a lot, the last few percent are a grind. Mastery
+makes an art cheaper in Qi and quicker to come round again, and how hard it hits scales at a
+rate each art declares for itself.
+
+Arts need the right thing in your hands. Sword arts require a sword; palm arts require hands
+free of a weapon; footwork and internal arts work regardless — so a swordsman and a palm
+artist play differently at the same realm.
+
+| Art | Hangul | Tier | Realm | Grip |
+|---|---|---|---|---|
+| Internal Healing | 내공치료 | 1 | Third-Rate | any |
+| Qinggong | 경공 | 1 | Third-Rate | any |
+| Divine Palm | 장법 | 2 | Second-Rate | hands free |
+| Water Walking | 수상보행 | 2 | Second-Rate | any |
+| Shadowless Step | 무영보 | 3 | First-Rate | any |
+| Sword Qi | 검기 | 3 | First-Rate | sword |
+| Iron Body | 첨신공 | 4 | Peak | any |
+| Sword Force | 검강 | 5 | Transcendent | sword |
+
+Four techniques can be bound at once. Slot 1 defaults to `R`; slots 2–4 ship unbound so you
+can assign keys that do not clash with your other mods, and `C` cycles the selected slot if
+you would rather use one cast key.
+
 ## Extending it with a datapack
 
 Realms, techniques, quests and sects are all datapack-driven. You don't need to compile
@@ -84,6 +110,23 @@ data/<your_pack>/murimcultivation/realm/my_realm.json
 data/<your_pack>/murimcultivation/technique/my_technique.json
 data/<your_pack>/murimcultivation/quest/my_quest.json
 ```
+
+A technique names a *behaviour* that the mod implements in code, so a pack can ship "Greater
+Sword Qi" as the `murimcultivation:sword_qi` behaviour with bigger numbers and a higher realm
+gate, but cannot author new behaviour without Java.
+
+## Checks
+
+```bash
+python3 tools/verify_sources.py   # structure, JSON, translation keys, datapack consistency
+./gradlew build                   # compile and unit tests
+```
+
+`verify_sources.py` needs no NeoForge artifact, so it runs anywhere. It catches the failure
+modes that compile perfectly and break silently: a misspelled resource directory, a
+translation key nothing defines, or two datapack files whose numbers contradict each other —
+for instance a technique whose declared realm requirement is lower than the realm that can
+actually channel it.
 
 ## Debug commands
 

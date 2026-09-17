@@ -56,6 +56,11 @@ public final class MurimConfig {
         private final ModConfigSpec.DoubleValue meridianExtraordinaryDeviationChance;
         private final ModConfigSpec.DoubleValue meridianPurityProtection;
         private final ModConfigSpec.DoubleValue meridianMinimumPurity;
+        private final ModConfigSpec.DoubleValue masteryGainFalloff;
+        private final ModConfigSpec.DoubleValue masteryMinGainFraction;
+        private final ModConfigSpec.DoubleValue masteryQiCostReduction;
+        private final ModConfigSpec.DoubleValue masteryCooldownReduction;
+        private final ModConfigSpec.BooleanValue techniquesHarmPlayers;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -241,6 +246,33 @@ public final class MurimConfig {
                     .define("lightning", true);
 
             builder.pop();
+            builder.comment("Martial arts and mastery").push("techniques");
+
+            masteryGainFalloff = builder
+                    .comment("How sharply mastery gains diminish as mastery rises.",
+                            "1.0 is linear; higher values make the last stretch a longer grind.")
+                    .defineInRange("masteryGainFalloff", 1.5D, 0.0D, 10.0D);
+
+            masteryMinGainFraction = builder
+                    .comment("Floor on the diminished gain, as a fraction of the base gain.",
+                            "Without a floor, full mastery becomes an asymptote a player can",
+                            "approach but never actually reach.")
+                    .defineInRange("masteryMinGainFraction", 0.12D, 0.0D, 1.0D);
+
+            masteryQiCostReduction = builder
+                    .comment("Fraction of a technique's Qi cost removed at full mastery.")
+                    .defineInRange("masteryQiCostReduction", 0.40D, 0.0D, 1.0D);
+
+            masteryCooldownReduction = builder
+                    .comment("Fraction of a technique's cooldown removed at full mastery.")
+                    .defineInRange("masteryCooldownReduction", 0.35D, 0.0D, 1.0D);
+
+            techniquesHarmPlayers = builder
+                    .comment("Whether offensive techniques can damage other players.",
+                            "Turn off for servers that want cultivation as progression only.")
+                    .define("techniquesHarmPlayers", true);
+
+            builder.pop();
             builder.comment("Performance and presentation").push("general");
 
             cultivationTickInterval = builder
@@ -395,6 +427,26 @@ public final class MurimConfig {
 
     public static double meridianMinimumPurity() {
         return VALUES.meridianMinimumPurity.get();
+    }
+
+    public static double masteryGainFalloff() {
+        return VALUES.masteryGainFalloff.get();
+    }
+
+    public static double masteryMinGainFraction() {
+        return VALUES.masteryMinGainFraction.get();
+    }
+
+    public static double masteryQiCostReduction() {
+        return VALUES.masteryQiCostReduction.get();
+    }
+
+    public static double masteryCooldownReduction() {
+        return VALUES.masteryCooldownReduction.get();
+    }
+
+    public static boolean techniquesHarmPlayers() {
+        return VALUES.techniquesHarmPlayers.get();
     }
 
     public static int cultivationTickInterval() {

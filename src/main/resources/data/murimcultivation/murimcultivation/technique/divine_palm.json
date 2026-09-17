@@ -1,0 +1,18 @@
+{
+  "tier": 2,
+  "translation_key": "murimcultivation.technique.divine_palm",
+  "hangul": "장법",
+  "behaviour": "murimcultivation:divine_palm",
+  "qi_cost": 25,
+  "cooldown_ticks": 60,
+  "required_realm_tier": 2,
+  "required_open_meridians": 0,
+  "hand": "free_hand",
+  "mastery_gain_per_use": 1.0,
+  "power": {
+    "base_damage": 4.0,
+    "damage_per_mastery": 0.1,
+    "radius": 3.5,
+    "knockback": 1.2
+  }
+}

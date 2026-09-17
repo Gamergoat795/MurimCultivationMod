@@ -2,6 +2,10 @@ package com.andymods.murimcultivation.command;
 
 import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.item.MartialManualItem;
+import com.andymods.murimcultivation.registry.ModItems;
+import com.andymods.murimcultivation.technique.Technique;
+import com.andymods.murimcultivation.technique.TechniqueService;
 import com.andymods.murimcultivation.cultivation.BreakthroughService;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
@@ -14,6 +18,7 @@ import com.andymods.murimcultivation.cultivation.RealmProgression;
 import com.andymods.murimcultivation.cultivation.Substage;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -29,6 +34,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -50,6 +56,11 @@ public final class MurimCommand {
     private static final SuggestionProvider<CommandSourceStack> REALM_SUGGESTIONS = (context, builder) ->
             SharedSuggestionProvider.suggestResource(
                     realmRegistry(context.getSource()).keySet().stream(), builder);
+
+    private static final SuggestionProvider<CommandSourceStack> TECHNIQUE_SUGGESTIONS = (context, builder) ->
+            SharedSuggestionProvider.suggestResource(
+                    context.getSource().registryAccess()
+                            .registryOrThrow(MurimRegistries.TECHNIQUE).keySet().stream(), builder);
 
     private static final SuggestionProvider<CommandSourceStack> MERIDIAN_SUGGESTIONS = (context, builder) ->
             SharedSuggestionProvider.suggest(
@@ -109,6 +120,27 @@ public final class MurimCommand {
         root.then(Commands.literal("breakthrough").executes(MurimCommand::forceBreakthroughCheck));
 
         root.then(Commands.literal("chance").executes(MurimCommand::showBreakthroughChance));
+
+        root.then(Commands.literal("technique")
+                .then(Commands.literal("learn")
+                        .then(Commands.argument("technique", ResourceLocationArgument.id())
+                                .suggests(TECHNIQUE_SUGGESTIONS)
+                                .executes(MurimCommand::learnTechnique)))
+                .then(Commands.literal("forget")
+                        .then(Commands.argument("technique", ResourceLocationArgument.id())
+                                .suggests(TECHNIQUE_SUGGESTIONS)
+                                .executes(MurimCommand::forgetTechnique)))
+                .then(Commands.literal("mastery")
+                        .then(Commands.argument("technique", ResourceLocationArgument.id())
+                                .suggests(TECHNIQUE_SUGGESTIONS)
+                                .then(Commands.argument("value", IntegerArgumentType.integer(0, 100))
+                                        .executes(MurimCommand::setTechniqueMastery))))
+                .then(Commands.literal("manual")
+                        .then(Commands.argument("technique", ResourceLocationArgument.id())
+                                .suggests(TECHNIQUE_SUGGESTIONS)
+                                .executes(MurimCommand::giveManual)))
+                .then(Commands.literal("learnall").executes(MurimCommand::learnAllTechniques))
+                .then(Commands.literal("list").executes(MurimCommand::listTechniques)));
 
         root.then(Commands.literal("deviate")
                 .then(Commands.argument("severity", StringArgumentType.word())
@@ -325,6 +357,96 @@ public final class MurimCommand {
         boolean cured = DeviationService.cure(player);
         send(context, Component.literal(cured ? "Deviation cured." : "No active deviation."));
         return cured ? 1 : 0;
+    }
+
+    private static int learnTechnique(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "technique");
+        Optional<Technique> technique = TechniqueService.byId(player, id);
+        if (technique.isEmpty()) {
+            send(context, Component.literal("Unknown technique: " + id));
+            return 0;
+        }
+
+        CultivationService.data(player).setAwakened(true);
+        boolean learned = TechniqueService.learn(player, id, technique.get());
+        send(context, Component.literal(learned ? "Learned " + id : "Already knows " + id));
+        return learned ? 1 : 0;
+    }
+
+    private static int forgetTechnique(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "technique");
+        boolean forgotten = CultivationService.data(player).forgetTechnique(id);
+        CultivationService.syncToClient(player);
+        send(context, Component.literal(forgotten ? "Forgot " + id : "Did not know " + id));
+        return forgotten ? 1 : 0;
+    }
+
+    private static int setTechniqueMastery(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "technique");
+        CultivationData data = CultivationService.data(player);
+        if (!data.knowsTechnique(id)) {
+            send(context, Component.literal("Does not know " + id + "; learn it first."));
+            return 0;
+        }
+
+        int value = IntegerArgumentType.getInteger(context, "value");
+        data.setTechniqueMastery(id, value);
+        CultivationService.syncToClient(player);
+        send(context, Component.literal("Mastery of " + id + " set to " + value));
+        return 1;
+    }
+
+    private static int giveManual(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "technique");
+        if (TechniqueService.byId(player, id).isEmpty()) {
+            send(context, Component.literal("Unknown technique: " + id));
+            return 0;
+        }
+
+        ItemStack manual = MartialManualItem.forTechnique(ModItems.MARTIAL_MANUAL.get(), id);
+        if (!player.getInventory().add(manual)) {
+            player.drop(manual, false);
+        }
+        send(context, Component.literal("Gave a manual for " + id));
+        return 1;
+    }
+
+    private static int learnAllTechniques(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationService.data(player).setAwakened(true);
+
+        int learned = 0;
+        for (var entry : TechniqueService.registry(player).entrySet()) {
+            if (TechniqueService.learn(player, entry.getKey().location(), entry.getValue())) {
+                learned++;
+            }
+        }
+        send(context, Component.literal("Learned " + learned + " new technique(s)."));
+        return learned;
+    }
+
+    private static int listTechniques(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+
+        send(context, Component.literal("--- Techniques ---"));
+        if (data.techniqueMastery().isEmpty()) {
+            send(context, Component.literal("(none learned)"));
+            return 0;
+        }
+
+        data.techniqueMastery().forEach((id, mastery) -> {
+            int slot = data.loadout().indexOf(id);
+            send(context, Component.literal(String.format(Locale.ROOT, "  %s  mastery %.1f  %s",
+                    id, mastery, slot >= 0 ? "slot " + (slot + 1) : "unbound")));
+        });
+        return data.techniqueMastery().size();
     }
 
     // --- Helpers ----------------------------------------------------------------------

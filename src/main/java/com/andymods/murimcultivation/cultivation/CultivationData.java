@@ -50,7 +50,7 @@ public class CultivationData {
     private double purity;
     private boolean awakened;
     private final Set<Meridian> openMeridians;
-    private final Map<ResourceLocation, Integer> techniqueMastery;
+    private final Map<ResourceLocation, Double> techniqueMastery;
     private final List<ResourceLocation> loadout;
     private int statPoints;
     private final Set<ResourceLocation> titles;
@@ -62,6 +62,8 @@ public class CultivationData {
     private boolean meditating;
     private int meditationTicks;
     private Vec3 meditationAnchor;
+    private final Map<ResourceLocation, Integer> techniqueCooldowns = new HashMap<>();
+    private int selectedSlot;
 
     public static final Codec<CultivationData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceKey.codec(MurimRegistries.REALM).optionalFieldOf("realm").forGetter(CultivationData::realmKey),
@@ -73,7 +75,7 @@ public class CultivationData {
             Codec.BOOL.optionalFieldOf("awakened", false).forGetter(CultivationData::isAwakened),
             Meridian.CODEC.listOf().optionalFieldOf("open_meridians", List.of())
                     .forGetter(data -> List.copyOf(data.openMeridians)),
-            Codec.unboundedMap(ResourceLocation.CODEC, Codec.INT).optionalFieldOf("technique_mastery", Map.of())
+            Codec.unboundedMap(ResourceLocation.CODEC, Codec.DOUBLE).optionalFieldOf("technique_mastery", Map.of())
                     .forGetter(data -> Map.copyOf(data.techniqueMastery)),
             ResourceLocation.CODEC.listOf().optionalFieldOf("loadout", List.of())
                     .forGetter(data -> List.copyOf(data.loadout)),
@@ -100,7 +102,7 @@ public class CultivationData {
                            double purity,
                            boolean awakened,
                            List<Meridian> openMeridians,
-                           Map<ResourceLocation, Integer> techniqueMastery,
+                           Map<ResourceLocation, Double> techniqueMastery,
                            List<ResourceLocation> loadout,
                            int statPoints,
                            List<ResourceLocation> titles,
@@ -248,35 +250,140 @@ public class CultivationData {
         return (int) openMeridians.stream().filter(Meridian::isExtraordinary).count();
     }
 
-    // --- Techniques (populated in M3) -------------------------------------------------
+    // --- Techniques -------------------------------------------------------------------
+
+    /** How many techniques can be bound for use at once. */
+    public static final int LOADOUT_SIZE = 4;
+    public static final double MIN_MASTERY = 0.0D;
+    public static final double MAX_MASTERY = 100.0D;
 
     public boolean knowsTechnique(ResourceLocation technique) {
         return techniqueMastery.containsKey(technique);
     }
 
+    /** Mastery as a whole number, for display and for scaling. */
     public int techniqueMastery(ResourceLocation technique) {
-        return techniqueMastery.getOrDefault(technique, 0);
+        return (int) Math.floor(techniqueMasteryExact(technique));
+    }
+
+    /**
+     * Mastery to full precision. Stored continuously because gains diminish as mastery rises:
+     * once gains drop below 1.0 per use, an integer store would round them away and mastery
+     * would stop advancing short of the maximum.
+     */
+    public double techniqueMasteryExact(ResourceLocation technique) {
+        return techniqueMastery.getOrDefault(technique, 0.0D);
     }
 
     public void setTechniqueMastery(ResourceLocation technique, int mastery) {
-        techniqueMastery.put(technique, Math.max(0, Math.min(100, mastery)));
+        setTechniqueMasteryExact(technique, mastery);
     }
 
+    public void setTechniqueMasteryExact(ResourceLocation technique, double mastery) {
+        techniqueMastery.put(technique, Math.max(MIN_MASTERY, Math.min(MAX_MASTERY, mastery)));
+    }
+
+    /** Adds mastery progress, clamped to the maximum. */
+    public void addTechniqueMasteryProgress(ResourceLocation technique, double amount) {
+        setTechniqueMasteryExact(technique, techniqueMasteryExact(technique) + amount);
+    }
+
+    /** Forgets a technique, removing it from the loadout too so no slot points at nothing. */
     public boolean forgetTechnique(ResourceLocation technique) {
+        loadout.remove(technique);
+        techniqueCooldowns.remove(technique);
         return techniqueMastery.remove(technique) != null;
     }
 
-    public Map<ResourceLocation, Integer> techniqueMastery() {
+    public Map<ResourceLocation, Double> techniqueMastery() {
         return Collections.unmodifiableMap(techniqueMastery);
     }
+
+    // --- Loadout ----------------------------------------------------------------------
 
     public List<ResourceLocation> loadout() {
         return Collections.unmodifiableList(loadout);
     }
 
+    /**
+     * Sets the whole loadout, keeping only known techniques and never exceeding
+     * {@link #LOADOUT_SIZE}. Slots are dense: there are no holes, so a bound slot always
+     * points at something.
+     */
     public void setLoadout(Collection<ResourceLocation> techniques) {
         loadout.clear();
-        loadout.addAll(techniques);
+        for (ResourceLocation technique : techniques) {
+            if (loadout.size() >= LOADOUT_SIZE) {
+                break;
+            }
+            if (knowsTechnique(technique) && !loadout.contains(technique)) {
+                loadout.add(technique);
+            }
+        }
+    }
+
+    public Optional<ResourceLocation> techniqueInSlot(int slot) {
+        if (slot < 0 || slot >= loadout.size()) {
+            return Optional.empty();
+        }
+        return Optional.of(loadout.get(slot));
+    }
+
+    /** Binds a technique to the first free slot, so a newly learned art is usable at once. */
+    public boolean assignFirstEmptySlot(ResourceLocation technique) {
+        if (loadout.contains(technique) || loadout.size() >= LOADOUT_SIZE) {
+            return false;
+        }
+        return loadout.add(technique);
+    }
+
+    /** The slot the cycle key has selected, for players who prefer one cast key. */
+    public int selectedSlot() {
+        return selectedSlot;
+    }
+
+    /** Advances the selection to the next occupied slot, wrapping. */
+    public int cycleSelectedSlot() {
+        if (loadout.isEmpty()) {
+            selectedSlot = 0;
+            return selectedSlot;
+        }
+        selectedSlot = (selectedSlot + 1) % loadout.size();
+        return selectedSlot;
+    }
+
+    // --- Technique cooldowns (transient) ----------------------------------------------
+
+    public boolean isTechniqueOnCooldown(ResourceLocation technique) {
+        return techniqueCooldowns.getOrDefault(technique, 0) > 0;
+    }
+
+    public int techniqueCooldown(ResourceLocation technique) {
+        return techniqueCooldowns.getOrDefault(technique, 0);
+    }
+
+    public void setTechniqueCooldown(ResourceLocation technique, int ticks) {
+        if (ticks <= 0) {
+            techniqueCooldowns.remove(technique);
+        } else {
+            techniqueCooldowns.put(technique, ticks);
+        }
+    }
+
+    public void clearTechniqueCooldown(ResourceLocation technique) {
+        techniqueCooldowns.remove(technique);
+    }
+
+    /**
+     * Counts every cooldown down one tick. Transient like meditation state: a cooldown that
+     * survived a relog would be a strange thing to persist.
+     */
+    public void tickTechniqueCooldowns() {
+        if (techniqueCooldowns.isEmpty()) {
+            return;
+        }
+        techniqueCooldowns.replaceAll((technique, ticks) -> ticks - 1);
+        techniqueCooldowns.values().removeIf(ticks -> ticks <= 0);
     }
 
     // --- System progression (populated in M4) -----------------------------------------
@@ -414,9 +521,16 @@ public class CultivationData {
         this.deviationTicks = source.deviationTicks;
     }
 
+    /** Clears all transient combat state. Used on respawn and by {@code /murim reset}. */
+    public void clearTransientCombatState() {
+        techniqueCooldowns.clear();
+        selectedSlot = 0;
+    }
+
     /** Wipes everything back to a fresh, un-awakened cultivator. Used by {@code /murim reset}. */
     public void reset() {
         copyFrom(new CultivationData());
         setMeditating(false);
+        clearTransientCombatState();
     }
 }

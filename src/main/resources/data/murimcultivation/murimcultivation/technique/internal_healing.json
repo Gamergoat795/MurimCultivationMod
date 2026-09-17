@@ -1,0 +1,18 @@
+{
+  "tier": 1,
+  "translation_key": "murimcultivation.technique.internal_healing",
+  "hangul": "내공치료",
+  "behaviour": "murimcultivation:internal_healing",
+  "qi_cost": 30,
+  "cooldown_ticks": 200,
+  "required_realm_tier": 1,
+  "required_open_meridians": 0,
+  "hand": "any",
+  "mastery_gain_per_use": 1.5,
+  "power": {
+    "base_damage": 0.0,
+    "damage_per_mastery": 0.06,
+    "heal_amount": 3.0,
+    "duration_ticks": 0
+  }
+}

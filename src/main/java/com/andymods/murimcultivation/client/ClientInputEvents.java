@@ -5,7 +5,9 @@ import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.MeridianService;
 import com.andymods.murimcultivation.network.AttemptBreakthroughPayload;
+import com.andymods.murimcultivation.network.CycleTechniquePayload;
 import com.andymods.murimcultivation.network.OpenMeridianPayload;
+import com.andymods.murimcultivation.network.UseTechniquePayload;
 import com.andymods.murimcultivation.network.ToggleMeditationPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -53,6 +55,27 @@ public final class ClientInputEvents {
                     meridian -> PacketDistributor.sendToServer(new OpenMeridianPayload(meridian)),
                     () -> minecraft.player.displayClientMessage(
                             Component.translatable("murimcultivation.meridian.network_complete"), true));
+        }
+
+        // Loadout slots. The client sends only which slot was pressed.
+        for (int slot = 0; slot < KeyBindings.TECHNIQUE_SLOTS.length; slot++) {
+            while (KeyBindings.TECHNIQUE_SLOTS[slot].consumeClick()) {
+                if (!data.isAwakened()) {
+                    minecraft.player.displayClientMessage(
+                            Component.translatable("murimcultivation.message.not_awakened"), true);
+                    continue;
+                }
+                PacketDistributor.sendToServer(new UseTechniquePayload(slot));
+            }
+        }
+
+        while (KeyBindings.CYCLE_TECHNIQUE.consumeClick()) {
+            if (!data.isAwakened()) {
+                minecraft.player.displayClientMessage(
+                        Component.translatable("murimcultivation.message.not_awakened"), true);
+                continue;
+            }
+            PacketDistributor.sendToServer(CycleTechniquePayload.INSTANCE);
         }
 
         while (KeyBindings.BREAKTHROUGH.consumeClick()) {

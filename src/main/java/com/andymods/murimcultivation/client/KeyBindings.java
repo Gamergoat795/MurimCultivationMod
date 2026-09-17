@@ -37,8 +37,47 @@ public final class KeyBindings {
             GLFW.GLFW_KEY_M,
             CATEGORY);
 
+    /**
+     * One key per loadout slot. Slot 1 defaults to R; slots 2-4 ship unbound so a player
+     * assigns them to keys that do not already mean something in their setup. An unbound
+     * mapping is still registered and still appears in the controls screen.
+     */
+    public static final KeyMapping[] TECHNIQUE_SLOTS = {
+            techniqueSlot(1, GLFW.GLFW_KEY_R),
+            techniqueSlot(2, InputConstants.UNKNOWN.getValue()),
+            techniqueSlot(3, InputConstants.UNKNOWN.getValue()),
+            techniqueSlot(4, InputConstants.UNKNOWN.getValue()),
+    };
+
+    /** Advances the selected slot, for players who would rather use one cast key than four. */
+    public static final KeyMapping CYCLE_TECHNIQUE = new KeyMapping(
+            "key.murimcultivation.cycle_technique",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_C,
+            CATEGORY);
+
+    private static KeyMapping techniqueSlot(int slot, int defaultKey) {
+        return new KeyMapping(
+                "key.murimcultivation.technique_slot_" + slot,
+                KeyConflictContext.IN_GAME,
+                InputConstants.Type.KEYSYM,
+                defaultKey,
+                CATEGORY);
+    }
+
     /** Every mapping this mod owns. Registration iterates this so a new binding cannot be forgotten. */
-    public static final KeyMapping[] ALL = { MEDITATE, BREAKTHROUGH, OPEN_MERIDIAN };
+    public static final KeyMapping[] ALL = buildAll();
+
+    private static KeyMapping[] buildAll() {
+        KeyMapping[] all = new KeyMapping[4 + TECHNIQUE_SLOTS.length];
+        all[0] = MEDITATE;
+        all[1] = BREAKTHROUGH;
+        all[2] = OPEN_MERIDIAN;
+        all[3] = CYCLE_TECHNIQUE;
+        System.arraycopy(TECHNIQUE_SLOTS, 0, all, 4, TECHNIQUE_SLOTS.length);
+        return all;
+    }
 
     private KeyBindings() {
     }

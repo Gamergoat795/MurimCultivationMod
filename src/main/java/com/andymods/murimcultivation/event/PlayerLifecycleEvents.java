@@ -60,6 +60,7 @@ public final class PlayerLifecycleEvents {
         CultivationData clone = CultivationService.data(event.getEntity());
         clone.copyFrom(original);
         clone.setMeditating(false);
+        clone.clearTransientCombatState();
     }
 
     private static void refresh(ServerPlayer player) {

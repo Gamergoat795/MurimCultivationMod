@@ -1,0 +1,15 @@
+{
+  "tier": 2,
+  "translation_key": "murimcultivation.technique.water_walking",
+  "hangul": "수상보행",
+  "behaviour": "murimcultivation:water_walking",
+  "qi_cost": 20,
+  "cooldown_ticks": 100,
+  "required_realm_tier": 2,
+  "required_open_meridians": 2,
+  "hand": "any",
+  "mastery_gain_per_use": 1.0,
+  "power": {
+    "duration_ticks": 400
+  }
+}

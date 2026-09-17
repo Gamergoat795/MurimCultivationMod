@@ -1,0 +1,17 @@
+{
+  "tier": 1,
+  "translation_key": "murimcultivation.technique.qinggong",
+  "hangul": "경공",
+  "behaviour": "murimcultivation:qinggong",
+  "qi_cost": 15,
+  "cooldown_ticks": 60,
+  "required_realm_tier": 1,
+  "required_open_meridians": 0,
+  "hand": "any",
+  "mastery_gain_per_use": 1.2,
+  "power": {
+    "duration_ticks": 200,
+    "amplifier": 1,
+    "speed_multiplier": 1.35
+  }
+}

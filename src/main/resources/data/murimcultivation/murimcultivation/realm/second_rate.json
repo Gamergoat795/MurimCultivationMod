@@ -8,7 +8,7 @@
   "purity_floor": 20.0,
   "required_open_meridians": 0,
   "breakthrough_base_chance": 0.95,
-  "technique_tier": 1,
+  "technique_tier": 2,
   "aura_color": 10868391,
   "attributes": [
     {

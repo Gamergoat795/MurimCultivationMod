@@ -39,6 +39,10 @@ public final class CultivationTickEvents {
             return;
         }
 
+        // Every tick, before anything can early-return: a cooldown must keep running down
+        // even while the player is deviated or has stopped meditating.
+        data.tickTechniqueCooldowns();
+
         if (tickDeviation(player, data)) {
             return;
         }

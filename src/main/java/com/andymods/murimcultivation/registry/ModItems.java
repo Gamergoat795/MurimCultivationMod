@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.registry;
 
 import com.andymods.murimcultivation.MurimCultivationMod;
+import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.item.QiGatheringManualItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.Item;
@@ -17,6 +18,15 @@ public final class ModItems {
     public static final DeferredHolder<Item, QiGatheringManualItem> QI_GATHERING_MANUAL =
             ITEMS.register("qi_gathering_manual",
                     () -> new QiGatheringManualItem(new Item.Properties().stacksTo(1)));
+
+    /**
+     * One manual item for every martial art. Which art a given stack teaches lives in its
+     * {@code technique} data component, so a datapack can hand out a manual for a technique
+     * it defined without needing a new item registered in Java.
+     */
+    public static final DeferredHolder<Item, MartialManualItem> MARTIAL_MANUAL =
+            ITEMS.register("martial_manual",
+                    () -> new MartialManualItem(new Item.Properties().stacksTo(1)));
 
     public static void register(IEventBus modBus) {
         ITEMS.register(modBus);

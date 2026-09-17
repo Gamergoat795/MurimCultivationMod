@@ -1,0 +1,17 @@
+{
+  "tier": 3,
+  "translation_key": "murimcultivation.technique.sword_qi",
+  "hangul": "검기",
+  "behaviour": "murimcultivation:sword_qi",
+  "qi_cost": 35,
+  "cooldown_ticks": 40,
+  "required_realm_tier": 3,
+  "required_open_meridians": 2,
+  "hand": "sword",
+  "mastery_gain_per_use": 0.9,
+  "power": {
+    "base_damage": 6.0,
+    "damage_per_mastery": 0.14,
+    "range": 18.0
+  }
+}

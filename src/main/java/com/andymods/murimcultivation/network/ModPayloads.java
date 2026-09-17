@@ -32,6 +32,21 @@ public final class ModPayloads {
                 OpenMeridianPayload.STREAM_CODEC,
                 ServerPayloadHandler::handleOpenMeridian);
 
+        registrar.playToServer(
+                UseTechniquePayload.TYPE,
+                UseTechniquePayload.STREAM_CODEC,
+                ServerPayloadHandler::handleUseTechnique);
+
+        registrar.playToServer(
+                CycleTechniquePayload.TYPE,
+                CycleTechniquePayload.STREAM_CODEC,
+                ServerPayloadHandler::handleCycleTechnique);
+
+        registrar.playToServer(
+                SetLoadoutPayload.TYPE,
+                SetLoadoutPayload.STREAM_CODEC,
+                ServerPayloadHandler::handleSetLoadout);
+
         // Server -> client.
         //
         // These MUST stay as explicit lambdas rather than ClientPayloadHandler::handleX method
