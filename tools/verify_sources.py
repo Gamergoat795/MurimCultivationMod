@@ -91,6 +91,14 @@ def check_structure() -> None:
         if not re.search(rf"\b(class|enum|record|interface)\s+{re.escape(stem)}\b", raw):
             fail(f"{path}: no top-level type named {stem}")
 
+        # A fully-qualified name written inline is always avoidable here — this mod has no
+        # simple-name collisions — and it reads worse than the import the rest of the file uses.
+        # Hand-fixed twice before this check existed, which is the usual sign it should be one.
+        qualified = set(re.findall(r"(?<![\w.])((?:net\.minecraft|net\.neoforged|com\.andymods)"
+                                   r"(?:\.[a-z][\w]*)+\.[A-Z]\w*)", body))
+        for name in sorted(qualified):
+            fail(f"{path}: fully-qualified {name} used inline; import it instead")
+
 
 def enum_ids(path: str) -> list[str]:
     """The serialized names of a StringRepresentable enum, e.g. LUNG("lung") -> lung."""

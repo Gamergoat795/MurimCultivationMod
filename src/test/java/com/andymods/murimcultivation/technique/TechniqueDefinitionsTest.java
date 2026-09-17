@@ -2,6 +2,7 @@ package com.andymods.murimcultivation.technique;
 
 import com.andymods.murimcultivation.cultivation.Meridian;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.item.MartialManualItem;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
@@ -201,7 +202,7 @@ class TechniqueDefinitionsTest {
         // MartialManualItem derives a technique's name from its id for tooltips, because the
         // registry is not reachable without a level. The shipped JSONs must follow that.
         loadTechniques().forEach((name, technique) -> {
-            String derived = com.andymods.murimcultivation.item.MartialManualItem.translationKeyFor(
+            String derived = MartialManualItem.translationKeyFor(
                     ResourceLocation.fromNamespaceAndPath("murimcultivation", name));
             assertEquals(technique.translationKey(), derived,
                     name + ": translation_key must match the convention tooltips derive");

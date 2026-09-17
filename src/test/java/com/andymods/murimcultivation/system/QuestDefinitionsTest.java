@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.SharedConstants;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -175,8 +176,8 @@ class QuestDefinitionsTest {
     void objectiveDescriptionsDoNotThrowForAnyKind() {
         // Every kind is rendered in the quest list, so a missing argument would crash the screen.
         for (ObjectiveKind kind : ObjectiveKind.values()) {
-            Optional<net.minecraft.resources.ResourceLocation> target = kind.needsTarget()
-                    ? Optional.of(net.minecraft.resources.ResourceLocation
+            Optional<ResourceLocation> target = kind.needsTarget()
+                    ? Optional.of(ResourceLocation
                             .fromNamespaceAndPath("murimcultivation", "qinggong"))
                     : Optional.empty();
             QuestObjective objective = new QuestObjective(kind, 3, target);
@@ -188,8 +189,8 @@ class QuestDefinitionsTest {
     @Test
     void rewardDescriptionsDoNotThrowForAnyKind() {
         for (RewardKind kind : RewardKind.values()) {
-            Optional<net.minecraft.resources.ResourceLocation> target = kind.needsTarget()
-                    ? Optional.of(net.minecraft.resources.ResourceLocation
+            Optional<ResourceLocation> target = kind.needsTarget()
+                    ? Optional.of(ResourceLocation
                             .fromNamespaceAndPath("murimcultivation", "thing"))
                     : Optional.empty();
             assertNotNull(new QuestReward(kind, 2.0D, target).description().getString(), kind + " description");

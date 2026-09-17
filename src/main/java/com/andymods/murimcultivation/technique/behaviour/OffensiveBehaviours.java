@@ -3,6 +3,7 @@ package com.andymods.murimcultivation.technique.behaviour;
 import com.andymods.murimcultivation.technique.Technique;
 import com.andymods.murimcultivation.technique.TechniqueBuffs;
 import com.andymods.murimcultivation.technique.TechniqueMastery;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.chat.Component;
@@ -47,9 +48,10 @@ public final class OffensiveBehaviours {
             Vec3 point = origin.add(direction.scale(range * step / steps));
 
             // Stop at the first solid block so Sword Qi does not cut through walls.
-            if (!player.level().getBlockState(net.minecraft.core.BlockPos.containing(point)).isAir()
-                    && player.level().getBlockState(net.minecraft.core.BlockPos.containing(point))
-                    .isSolidRender(player.level(), net.minecraft.core.BlockPos.containing(point))) {
+            BlockPos blockPos = BlockPos.containing(point);
+            if (!player.level().getBlockState(blockPos).isAir()
+                    && player.level().getBlockState(blockPos)
+                    .isSolidRender(player.level(), blockPos)) {
                 break;
             }
 
