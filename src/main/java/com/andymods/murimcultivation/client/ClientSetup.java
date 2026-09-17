@@ -4,10 +4,13 @@ import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.client.hud.CultivationHudLayer;
 import com.andymods.murimcultivation.client.hud.SystemToastLayer;
 import com.andymods.murimcultivation.client.hud.TechniqueBarLayer;
+import com.andymods.murimcultivation.client.render.MartialArtistRenderer;
+import com.andymods.murimcultivation.registry.ModEntities;
 import net.minecraft.client.KeyMapping;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 
@@ -32,6 +35,12 @@ public final class ClientSetup {
         event.registerAboveAll(MurimCultivationMod.id("cultivation_hud"), new CultivationHudLayer());
         event.registerAboveAll(MurimCultivationMod.id("technique_bar"), new TechniqueBarLayer());
         event.registerAboveAll(MurimCultivationMod.id("system_toasts"), new SystemToastLayer());
+    }
+
+    @SubscribeEvent
+    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        // An entity type registered without a renderer crashes the moment one is spawned.
+        event.registerEntityRenderer(ModEntities.MARTIAL_ARTIST.get(), MartialArtistRenderer::new);
     }
 
     private ClientSetup() {

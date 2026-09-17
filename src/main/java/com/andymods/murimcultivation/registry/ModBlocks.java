@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.registry;
 
 import com.andymods.murimcultivation.MurimCultivationMod;
+import com.andymods.murimcultivation.alchemy.CauldronBlock;
 import com.andymods.murimcultivation.world.SpiritVeinBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
@@ -27,6 +28,16 @@ public final class ModBlocks {
                             .requiresCorrectToolForDrops()
                             .lightLevel(state -> 6)
                             .sound(SoundType.AMETHYST)));
+
+    /** Where herbs become pills. */
+    public static final DeferredHolder<Block, CauldronBlock> PILL_CAULDRON =
+            BLOCKS.register("pill_cauldron", () -> new CauldronBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.METAL)
+                            .strength(3.5F, 6.0F)
+                            .requiresCorrectToolForDrops()
+                            .noOcclusion()
+                            .sound(SoundType.METAL)));
 
     public static void register(IEventBus modBus) {
         BLOCKS.register(modBus);

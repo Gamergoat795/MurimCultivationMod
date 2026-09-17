@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation;
 
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.alchemy.PillRecipe;
 import com.andymods.murimcultivation.sect.Sect;
 import com.andymods.murimcultivation.system.SystemQuest;
 import com.andymods.murimcultivation.system.Title;
@@ -23,6 +24,7 @@ public final class MurimRegistries {
     public static final ResourceKey<Registry<SystemQuest>> QUEST = key("quest");
     public static final ResourceKey<Registry<Title>> TITLE = key("title");
     public static final ResourceKey<Registry<Sect>> SECT = key("sect");
+    public static final ResourceKey<Registry<PillRecipe>> PILL_RECIPE = key("pill_recipe");
 
     private static <T> ResourceKey<Registry<T>> key(String path) {
         return ResourceKey.createRegistryKey(MurimCultivationMod.id(path));

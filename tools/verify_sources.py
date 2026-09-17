@@ -140,6 +140,11 @@ def check_translation_keys() -> None:
         f"{MODID}.sect_rank.": enum_ids("src/main/java/com/andymods/murimcultivation/sect/SectRank.java"),
         f"{MODID}.sect_alignment.": enum_ids(
             "src/main/java/com/andymods/murimcultivation/sect/SectAlignment.java"),
+        f"{MODID}.npc.": ["prefix", "no_sect", "not_a_member", "nothing_left",
+                          "rise_further", "unknown_art", "taught"],
+        f"{MODID}.pill.": [f"{effect}.{suffix}"
+                           for effect in ("qi_recovery", "deviation_remedy", "purity")
+                           for suffix in ("description", "wasted")] + ["not_awakened"],
         f"{MODID}.sect.": datapack_ids("sect") + ["left"] + [
             f"refused.{reason}" for reason in
             ("unknown", "not_awakened", "realm", "already_member", "opposed")],
@@ -180,7 +185,7 @@ def check_translation_keys() -> None:
         fail(f"translation key referenced but not defined: {key}")
     # Item and creative-tab keys are resolved by vanilla from the registry name.
     for key in sorted(defined - referenced):
-        if not key.startswith(("item.", "itemGroup.", "block.")):
+        if not key.startswith(("item.", "itemGroup.", "block.", "entity.")):
             fail(f"translation key defined but never referenced: {key}")
 
 

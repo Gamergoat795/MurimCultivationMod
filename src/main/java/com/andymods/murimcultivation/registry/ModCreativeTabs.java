@@ -25,6 +25,14 @@ public final class ModCreativeTabs {
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.QI_GATHERING_MANUAL.get());
                         output.accept(ModItems.SPIRIT_VEIN_ITEM.get());
+                        output.accept(ModItems.PILL_CAULDRON_ITEM.get());
+                        output.accept(ModItems.SPIRIT_GINSENG.get());
+                        output.accept(ModItems.BLOOD_LOTUS.get());
+                        output.accept(ModItems.JADE_CHRYSANTHEMUM.get());
+                        output.accept(ModItems.QI_RECOVERY_PILL.get());
+                        output.accept(ModItems.DEVIATION_REMEDY_PILL.get());
+                        output.accept(ModItems.FOUNDATION_PILL.get());
+                        output.accept(ModItems.MARTIAL_ARTIST_SPAWN_EGG.get());
                         // A manual for every technique the loaded datapacks define, so new
                         // datapack content shows up in creative without any code change.
                         parameters.holders()
