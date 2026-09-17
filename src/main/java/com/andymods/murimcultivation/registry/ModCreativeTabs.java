@@ -24,6 +24,7 @@ public final class ModCreativeTabs {
                     .icon(() -> new ItemStack(ModItems.QI_GATHERING_MANUAL.get()))
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.QI_GATHERING_MANUAL.get());
+                        output.accept(ModItems.SPIRIT_VEIN_ITEM.get());
                         // A manual for every technique the loaded datapacks define, so new
                         // datapack content shows up in creative without any code change.
                         parameters.holders()

@@ -1,0 +1,18 @@
+{
+  "translation_key": "murimcultivation.sect.murim_alliance",
+  "hangul": "무림맹",
+  "alignment": "orthodox",
+  "color": 6600182,
+  "required_realm_tier": 2,
+  "teachings": {
+    "outer_disciple": [
+      "murimcultivation:qinggong"
+    ],
+    "inner_disciple": [
+      "murimcultivation:sword_qi"
+    ],
+    "core_disciple": [
+      "murimcultivation:sword_force"
+    ]
+  }
+}

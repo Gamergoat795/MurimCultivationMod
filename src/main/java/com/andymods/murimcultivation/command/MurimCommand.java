@@ -4,6 +4,9 @@ import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.registry.ModItems;
+import com.andymods.murimcultivation.sect.Sect;
+import com.andymods.murimcultivation.sect.SectRank;
+import com.andymods.murimcultivation.sect.SectService;
 import com.andymods.murimcultivation.technique.Technique;
 import com.andymods.murimcultivation.system.QuestLog;
 import com.andymods.murimcultivation.system.QuestObjective;
@@ -72,6 +75,11 @@ public final class MurimCommand {
             SharedSuggestionProvider.suggestResource(
                     context.getSource().registryAccess()
                             .registryOrThrow(MurimRegistries.QUEST).keySet().stream(), builder);
+
+    private static final SuggestionProvider<CommandSourceStack> SECT_SUGGESTIONS = (context, builder) ->
+            SharedSuggestionProvider.suggestResource(
+                    context.getSource().registryAccess()
+                            .registryOrThrow(MurimRegistries.SECT).keySet().stream(), builder);
 
     private static final SuggestionProvider<CommandSourceStack> MERIDIAN_SUGGESTIONS = (context, builder) ->
             SharedSuggestionProvider.suggest(
@@ -184,6 +192,22 @@ public final class MurimCommand {
 
         root.then(Commands.literal("cure").executes(MurimCommand::cureDeviation));
 
+        root.then(Commands.literal("sect")
+                .then(Commands.literal("list").executes(MurimCommand::listSects))
+                .then(Commands.literal("join")
+                        .then(Commands.argument("sect", ResourceLocationArgument.id())
+                                .suggests(SECT_SUGGESTIONS)
+                                .executes(MurimCommand::joinSect)))
+                .then(Commands.literal("leave")
+                        .then(Commands.argument("sect", ResourceLocationArgument.id())
+                                .suggests(SECT_SUGGESTIONS)
+                                .executes(MurimCommand::leaveSect)))
+                .then(Commands.literal("reputation")
+                        .then(Commands.argument("sect", ResourceLocationArgument.id())
+                                .suggests(SECT_SUGGESTIONS)
+                                .then(Commands.argument("amount", IntegerArgumentType.integer(-100000, 100000))
+                                        .executes(MurimCommand::addSectReputation)))));
+
         dispatcher.register(root);
     }
 
@@ -214,6 +238,11 @@ public final class MurimCommand {
                 + data.systemProgress().allocations()));
         send(context, Component.literal("Titles: " + data.systemProgress().titles().size()
                 + ", worn: " + data.systemProgress().equippedTitle().map(Object::toString).orElse("none")));
+        send(context, Component.literal("Sects: " + data.sectReputation().entrySet().stream()
+                .filter(entry -> entry.getValue() > 0)
+                .map(entry -> entry.getKey().getPath() + " "
+                        + SectRank.forReputation(entry.getValue()).getSerializedName())
+                .toList()));
         send(context, Component.literal("Quests: " + data.questLog().completed().size() + " completed, "
                 + QuestTracker.available(player).size() + " available"));
         send(context, Component.literal("Breakthrough: " + BreakthroughService.check(player).name()));
@@ -591,6 +620,60 @@ public final class MurimCommand {
         CultivationService.syncToClient(player);
         send(context, Component.literal("Refunded " + refunded + " stat point(s)."));
         return refunded;
+    }
+
+    private static int listSects(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+
+        send(context, Component.literal("--- Sects ---"));
+        for (var entry : SectService.registry(player).entrySet()) {
+            ResourceLocation id = entry.getKey().location();
+            Sect sect = entry.getValue();
+            int reputation = data.sectReputation(id);
+            SectRank rank = SectRank.forReputation(reputation);
+            SectRank next = rank.next();
+            String toNext = next == null ? "" : " (next at " + next.reputationRequired() + ")";
+            send(context, Component.literal(String.format(Locale.ROOT, "  %s [%s]  rep %s, %s%s",
+                    id, sect.alignment().getSerializedName(), reputation,
+                    rank.getSerializedName(), toNext)));
+        }
+        return 1;
+    }
+
+    private static int joinSect(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "sect");
+        SectService.JoinResult result = SectService.join(player, id);
+        send(context, result.accepted()
+                ? Component.literal("Joined " + id)
+                : Component.literal("Refused: " + result.name() + " — ").append(result.message()));
+        return result.accepted() ? 1 : 0;
+    }
+
+    private static int leaveSect(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "sect");
+        boolean left = SectService.leave(player, id);
+        send(context, Component.literal(left ? "Left " + id : "No standing with " + id));
+        return left ? 1 : 0;
+    }
+
+    private static int addSectReputation(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "sect");
+        if (SectService.byId(player, id).isEmpty()) {
+            send(context, Component.literal("Unknown sect: " + id));
+            return 0;
+        }
+
+        int amount = IntegerArgumentType.getInteger(context, "amount");
+        SectRank rank = SectService.addReputation(player, id, amount);
+        send(context, Component.literal("Reputation with " + id + " now "
+                + CultivationService.data(player).sectReputation(id)
+                + " (" + rank.getSerializedName() + ")"));
+        return 1;
     }
 
     // --- Helpers ----------------------------------------------------------------------

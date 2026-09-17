@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation;
 
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.sect.Sect;
 import com.andymods.murimcultivation.system.SystemQuest;
 import com.andymods.murimcultivation.system.Title;
 import com.andymods.murimcultivation.technique.Technique;
@@ -21,6 +22,7 @@ public final class MurimRegistries {
     public static final ResourceKey<Registry<Technique>> TECHNIQUE = key("technique");
     public static final ResourceKey<Registry<SystemQuest>> QUEST = key("quest");
     public static final ResourceKey<Registry<Title>> TITLE = key("title");
+    public static final ResourceKey<Registry<Sect>> SECT = key("sect");
 
     private static <T> ResourceKey<Registry<T>> key(String path) {
         return ResourceKey.createRegistryKey(MurimCultivationMod.id(path));

@@ -28,6 +28,10 @@ public final class ModItems {
             ITEMS.register("martial_manual",
                     () -> new MartialManualItem(new Item.Properties().stacksTo(1)));
 
+    /** The spirit vein's item form, so it can be placed and appears in the creative tab. */
+    public static final DeferredHolder<Item, Item> SPIRIT_VEIN_ITEM =
+            ITEMS.register("spirit_vein", () -> ModBlocks.blockItem(ModBlocks.SPIRIT_VEIN.get()));
+
     public static void register(IEventBus modBus) {
         ITEMS.register(modBus);
     }

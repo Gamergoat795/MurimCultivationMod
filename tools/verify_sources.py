@@ -137,6 +137,12 @@ def check_translation_keys() -> None:
         f"{MODID}.quest.": datapack_ids("quest") + [f"{q}.description" for q in datapack_ids("quest")],
         f"{MODID}.title.": datapack_ids("title") + ["not_owned"],
         f"{MODID}.system.tab.": ["status", "meridians", "techniques", "quests"],
+        f"{MODID}.sect_rank.": enum_ids("src/main/java/com/andymods/murimcultivation/sect/SectRank.java"),
+        f"{MODID}.sect_alignment.": enum_ids(
+            "src/main/java/com/andymods/murimcultivation/sect/SectAlignment.java"),
+        f"{MODID}.sect.": datapack_ids("sect") + ["left"] + [
+            f"refused.{reason}" for reason in
+            ("unknown", "not_awakened", "realm", "already_member", "opposed")],
         f"{MODID}.stat.": [s for stat in ("body", "force", "meridian", "insight")
                            for s in (stat, f"{stat}.description")] + ["cannot_spend"],
         f"{MODID}.objective.": enum_ids("src/main/java/com/andymods/murimcultivation/system/ObjectiveKind.java"),
@@ -163,7 +169,7 @@ def check_translation_keys() -> None:
         for suffix in suffixes:
             referenced.add(prefix + suffix)
 
-    for registry in ("realm", "technique", "quest", "title"):
+    for registry in ("realm", "technique", "quest", "title", "sect"):
         for path in glob.glob(f"{DATA_DIR}/{registry}/*.json"):
             document = json.load(open(path, encoding="utf-8"))
             referenced.add(document["translation_key"])
@@ -174,7 +180,7 @@ def check_translation_keys() -> None:
         fail(f"translation key referenced but not defined: {key}")
     # Item and creative-tab keys are resolved by vanilla from the registry name.
     for key in sorted(defined - referenced):
-        if not key.startswith(("item.", "itemGroup.")):
+        if not key.startswith(("item.", "itemGroup.", "block.")):
             fail(f"translation key defined but never referenced: {key}")
 
 

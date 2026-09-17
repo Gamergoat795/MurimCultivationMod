@@ -2,10 +2,12 @@ package com.andymods.murimcultivation;
 
 import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.sect.Sect;
 import com.andymods.murimcultivation.system.SystemQuest;
 import com.andymods.murimcultivation.system.Title;
 import com.andymods.murimcultivation.technique.Technique;
 import com.andymods.murimcultivation.registry.ModAttachments;
+import com.andymods.murimcultivation.registry.ModBlocks;
 import com.andymods.murimcultivation.registry.ModDataComponents;
 import com.andymods.murimcultivation.registry.ModCreativeTabs;
 import com.andymods.murimcultivation.registry.ModItems;
@@ -25,6 +27,7 @@ public class MurimCultivationMod {
 
     public MurimCultivationMod(IEventBus modBus, ModContainer modContainer) {
         ModAttachments.register(modBus);
+        ModBlocks.register(modBus);
         ModDataComponents.register(modBus);
         ModItems.register(modBus);
         ModCreativeTabs.register(modBus);
@@ -54,6 +57,7 @@ public class MurimCultivationMod {
             event.dataPackRegistry(MurimRegistries.TECHNIQUE, Technique.CODEC, Technique.CODEC);
             event.dataPackRegistry(MurimRegistries.QUEST, SystemQuest.CODEC, SystemQuest.CODEC);
             event.dataPackRegistry(MurimRegistries.TITLE, Title.CODEC, Title.CODEC);
+            event.dataPackRegistry(MurimRegistries.SECT, Sect.CODEC, Sect.CODEC);
         }
 
         private ModBusEvents() {

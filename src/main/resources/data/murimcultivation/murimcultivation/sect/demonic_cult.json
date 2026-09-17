@@ -1,0 +1,18 @@
+{
+  "translation_key": "murimcultivation.sect.demonic_cult",
+  "hangul": "마교",
+  "alignment": "demonic",
+  "color": 15483002,
+  "required_realm_tier": 2,
+  "teachings": {
+    "outer_disciple": [
+      "murimcultivation:divine_palm"
+    ],
+    "inner_disciple": [
+      "murimcultivation:shadowless_step"
+    ],
+    "core_disciple": [
+      "murimcultivation:iron_body"
+    ]
+  }
+}

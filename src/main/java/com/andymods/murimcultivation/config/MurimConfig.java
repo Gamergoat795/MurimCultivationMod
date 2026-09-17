@@ -35,6 +35,7 @@ public final class MurimConfig {
         private final ModConfigSpec.DoubleValue qiDensityThunder;
         private final ModConfigSpec.DoubleValue qiDensityAltitudeBonusPerBlock;
         private final ModConfigSpec.DoubleValue qiDensityAltitudeBonusCap;
+        private final ModConfigSpec.DoubleValue spiritVeinBonus;
         private final ModConfigSpec.DoubleValue qiDensityMinimum;
         private final ModConfigSpec.DoubleValue qiDensityMaximum;
         private final ModConfigSpec.DoubleValue enlightenmentChancePerSecond;
@@ -129,6 +130,11 @@ public final class MurimConfig {
             qiDensityAltitudeBonusCap = builder
                     .comment("Maximum total bonus from altitude, so extremes do not run away.")
                     .defineInRange("altitudeBonusCap", 0.45D, 0.0D, 100.0D);
+
+            spiritVeinBonus = builder
+                    .comment("Bonus per spirit vein nearby, before diminishing returns.",
+                            "Four veins are worth roughly twice one, not four times.")
+                    .defineInRange("spiritVeinBonus", 0.25D, 0.0D, 100.0D);
 
             qiDensityMinimum = builder
                     .comment("Floor on the combined multiplier. A poor location should be slow,",
@@ -371,6 +377,10 @@ public final class MurimConfig {
 
     public static double qiDensityAltitudeBonusCap() {
         return VALUES.qiDensityAltitudeBonusCap.get();
+    }
+
+    public static double spiritVeinBonus() {
+        return VALUES.spiritVeinBonus.get();
     }
 
     public static double qiDensityMinimum() {

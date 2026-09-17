@@ -62,6 +62,18 @@ public record SystemNotification(Kind kind, Component title, Component detail) {
                 Component.empty());
     }
 
+    public static SystemNotification sectJoined(Component sectName) {
+        return new SystemNotification(Kind.ADVANCEMENT,
+                Component.translatable("murimcultivation.system.sect_joined", sectName),
+                Component.empty());
+    }
+
+    public static SystemNotification sectPromoted(Component sectName, Component rankName) {
+        return new SystemNotification(Kind.ADVANCEMENT,
+                Component.translatable("murimcultivation.system.sect_promoted", rankName),
+                sectName);
+    }
+
     public static SystemNotification warning(Component detail) {
         return new SystemNotification(Kind.WARNING,
                 Component.translatable("murimcultivation.system.warning"), detail);

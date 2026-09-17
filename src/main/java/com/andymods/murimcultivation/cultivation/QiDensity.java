@@ -2,6 +2,7 @@ package com.andymods.murimcultivation.cultivation;
 
 import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.config.MurimConfig;
+import com.andymods.murimcultivation.world.QiSources;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
@@ -43,7 +44,9 @@ public final class QiDensity {
         double multiplier = biomeMultiplier(level, pos)
                 * altitudeMultiplier(pos)
                 * timeMultiplier(level)
-                * weatherMultiplier(level);
+                * weatherMultiplier(level)
+                // What has been put here, as opposed to what the place is.
+                * QiSources.multiplierAt(level, pos);
 
         return Math.max(MurimConfig.qiDensityMinimum(), Math.min(MurimConfig.qiDensityMaximum(), multiplier));
     }
