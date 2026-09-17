@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.cultivation;
 
 import com.andymods.murimcultivation.config.MurimConfig;
+import com.andymods.murimcultivation.system.QuestTracker;
 import net.minecraft.core.Registry;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -176,6 +177,7 @@ public final class MeridianService {
         // The network just widened, so the Qi ceiling rose with it.
         CultivationService.clampQiToCapacity(player, data);
         celebrate(player, meridian, data);
+        QuestTracker.evaluate(player);
         CultivationService.syncToClient(player);
         return Optional.of(new Outcome(true, meridian, cost, null));
     }

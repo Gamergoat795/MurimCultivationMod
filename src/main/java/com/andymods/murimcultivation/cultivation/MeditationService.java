@@ -179,6 +179,7 @@ public final class MeditationService {
         double gained = MurimConfig.meditationProgressPerSecond()
                 * rampMultiplier(data)
                 * density
+                * CultivationService.cultivationRateMultiplier(data)
                 * seconds;
 
         data.addProgress(gained);

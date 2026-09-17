@@ -5,6 +5,8 @@ import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.MeditationService;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.system.ObjectiveKind;
+import com.andymods.murimcultivation.system.QuestTracker;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -174,6 +176,7 @@ public final class TechniqueService {
         }
 
         grantMastery(player, data, id, technique, mastery);
+        QuestTracker.recordProgress(player, ObjectiveKind.CAST_TECHNIQUE, id, 1);
         CultivationService.syncToClient(player);
         return true;
     }
@@ -231,6 +234,8 @@ public final class TechniqueService {
         data.assignFirstEmptySlot(id);
         player.sendSystemMessage(Component.translatable(
                 "murimcultivation.technique.learned", technique.fullDisplayName()));
+        // Learning and mastering are threshold objectives, so re-read rather than counted.
+        QuestTracker.evaluate(player);
         CultivationService.syncToClient(player);
         return true;
     }

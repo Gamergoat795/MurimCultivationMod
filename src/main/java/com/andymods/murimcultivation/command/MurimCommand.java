@@ -5,6 +5,11 @@ import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.registry.ModItems;
 import com.andymods.murimcultivation.technique.Technique;
+import com.andymods.murimcultivation.system.QuestLog;
+import com.andymods.murimcultivation.system.QuestObjective;
+import com.andymods.murimcultivation.system.QuestTracker;
+import com.andymods.murimcultivation.system.StatType;
+import com.andymods.murimcultivation.system.SystemQuest;
 import com.andymods.murimcultivation.technique.TechniqueService;
 import com.andymods.murimcultivation.cultivation.BreakthroughService;
 import com.andymods.murimcultivation.cultivation.CultivationData;
@@ -40,6 +45,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -61,6 +67,11 @@ public final class MurimCommand {
             SharedSuggestionProvider.suggestResource(
                     context.getSource().registryAccess()
                             .registryOrThrow(MurimRegistries.TECHNIQUE).keySet().stream(), builder);
+
+    private static final SuggestionProvider<CommandSourceStack> QUEST_SUGGESTIONS = (context, builder) ->
+            SharedSuggestionProvider.suggestResource(
+                    context.getSource().registryAccess()
+                            .registryOrThrow(MurimRegistries.QUEST).keySet().stream(), builder);
 
     private static final SuggestionProvider<CommandSourceStack> MERIDIAN_SUGGESTIONS = (context, builder) ->
             SharedSuggestionProvider.suggest(
@@ -121,6 +132,27 @@ public final class MurimCommand {
 
         root.then(Commands.literal("chance").executes(MurimCommand::showBreakthroughChance));
 
+        root.then(Commands.literal("quest")
+                .then(Commands.literal("list").executes(MurimCommand::listQuests))
+                .then(Commands.literal("complete")
+                        .then(Commands.argument("quest", ResourceLocationArgument.id())
+                                .suggests(QUEST_SUGGESTIONS)
+                                .executes(MurimCommand::completeQuest)))
+                .then(Commands.literal("reset").executes(MurimCommand::resetQuests)));
+
+        root.then(Commands.literal("stat")
+                .then(Commands.literal("grant")
+                        .then(Commands.argument("points", IntegerArgumentType.integer(1, 10000))
+                                .executes(MurimCommand::grantStatPoints)))
+                .then(Commands.literal("spend")
+                        .then(Commands.argument("stat", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                        Arrays.stream(StatType.values()).map(StatType::getSerializedName),
+                                        builder))
+                                .then(Commands.argument("points", IntegerArgumentType.integer(1, 100))
+                                        .executes(MurimCommand::spendStatPoints))))
+                .then(Commands.literal("respec").executes(MurimCommand::respec)));
+
         root.then(Commands.literal("technique")
                 .then(Commands.literal("learn")
                         .then(Commands.argument("technique", ResourceLocationArgument.id())
@@ -177,6 +209,13 @@ public final class MurimCommand {
                 + " (" + data.openExtraordinaryCount() + " extraordinary)"));
         send(context, Component.literal("Deviation: " + data.deviation().getSerializedName()
                 + (data.deviation().isActive() ? " (" + data.deviationTicks() + " ticks left)" : "")));
+        send(context, Component.literal("Stat points: " + data.systemProgress().unspentPoints()
+                + " unspent, " + data.systemProgress().totalSpent() + " spent "
+                + data.systemProgress().allocations()));
+        send(context, Component.literal("Titles: " + data.systemProgress().titles().size()
+                + ", worn: " + data.systemProgress().equippedTitle().map(Object::toString).orElse("none")));
+        send(context, Component.literal("Quests: " + data.questLog().completed().size() + " completed, "
+                + QuestTracker.available(player).size() + " available"));
         send(context, Component.literal("Breakthrough: " + BreakthroughService.check(player).name()));
         send(context, Component.literal(String.format(Locale.ROOT, "Ambient Qi: %.2fx (%s)",
                 QiDensity.multiplierFor(player),
@@ -447,6 +486,111 @@ public final class MurimCommand {
                     id, mastery, slot >= 0 ? "slot " + (slot + 1) : "unbound")));
         });
         return data.techniqueMastery().size();
+    }
+
+    private static int listQuests(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+
+        send(context, Component.literal("--- Quests ---"));
+        List<ResourceLocation> available = QuestTracker.available(player);
+        if (available.isEmpty()) {
+            send(context, Component.literal("(nothing available)"));
+        }
+        for (ResourceLocation id : available) {
+            SystemQuest quest = QuestTracker.registry(player)
+                    .get(ResourceKey.create(MurimRegistries.QUEST, id));
+            if (quest == null) {
+                continue;
+            }
+            send(context, Component.literal("  " + id + " [" + quest.category().getSerializedName() + "]"));
+            for (QuestObjective objective : quest.objectives()) {
+                int current = QuestTracker.currentValue(player, data, id, objective);
+                send(context, Component.literal(String.format(Locale.ROOT, "      %s/%s ",
+                        current, objective.amount())).append(objective.description()));
+            }
+        }
+        send(context, Component.literal("Completed: " + data.questLog().completed().size()
+                + ", dailies claimed: " + data.questLog().claimedDailies().size()));
+        return available.size();
+    }
+
+    private static int completeQuest(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        ResourceLocation id = ResourceLocationArgument.getId(context, "quest");
+        SystemQuest quest = QuestTracker.registry(player)
+                .get(ResourceKey.create(MurimRegistries.QUEST, id));
+        if (quest == null) {
+            send(context, Component.literal("Unknown quest: " + id));
+            return 0;
+        }
+
+        // Force every objective to its target so the real completion path runs, rewards
+        // included — a shortcut that skipped it would not be testing anything.
+        CultivationData data = CultivationService.data(player);
+        for (QuestObjective objective : quest.objectives()) {
+            if (objective.kind().isCumulative()) {
+                data.questLog().advance(id, objective, objective.amount());
+            }
+        }
+        QuestTracker.evaluate(player);
+        send(context, Component.literal(data.questLog().isCompleted(id)
+                || data.questLog().isDailyClaimed(id)
+                ? "Completed " + id
+                : "Objectives filled, but " + id + " still has unmet thresholds (realm, purity or meridians)"));
+        return 1;
+    }
+
+    private static int resetQuests(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        CultivationData data = CultivationService.data(player);
+        data.questLog().copyFrom(new QuestLog());
+        CultivationService.syncToClient(player);
+        send(context, Component.literal("Quest log cleared."));
+        return 1;
+    }
+
+    private static int grantStatPoints(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        int points = IntegerArgumentType.getInteger(context, "points");
+        CultivationService.data(player).systemProgress().grantPoints(points);
+        CultivationService.syncToClient(player);
+        send(context, Component.literal("Granted " + points + " stat point(s)."));
+        return points;
+    }
+
+    private static int spendStatPoints(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        String name = StringArgumentType.getString(context, "stat").toLowerCase(Locale.ROOT);
+        Optional<StatType> stat = Arrays.stream(StatType.values())
+                .filter(value -> value.getSerializedName().equals(name))
+                .findFirst();
+        if (stat.isEmpty()) {
+            send(context, Component.literal("Unknown stat: " + name));
+            return 0;
+        }
+
+        int points = IntegerArgumentType.getInteger(context, "points");
+        if (!CultivationService.data(player).systemProgress().spend(stat.get(), points)) {
+            send(context, Component.literal("Cannot spend " + points + " on " + name
+                    + " (not enough points, or the stat is capped)."));
+            return 0;
+        }
+        CultivationService.applyAttributes(player);
+        CultivationService.syncToClient(player);
+        send(context, Component.literal("Spent " + points + " on " + name + "."));
+        return 1;
+    }
+
+    private static int respec(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        int refunded = CultivationService.data(player).systemProgress().refundAll();
+        CultivationService.applyAttributes(player);
+        CultivationService.syncToClient(player);
+        send(context, Component.literal("Refunded " + refunded + " stat point(s)."));
+        return refunded;
     }
 
     // --- Helpers ----------------------------------------------------------------------

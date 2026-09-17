@@ -61,6 +61,10 @@ public final class MurimConfig {
         private final ModConfigSpec.DoubleValue masteryQiCostReduction;
         private final ModConfigSpec.DoubleValue masteryCooldownReduction;
         private final ModConfigSpec.BooleanValue techniquesHarmPlayers;
+        private final ModConfigSpec.DoubleValue statPointPower;
+        private final ModConfigSpec.IntValue statPointsPerSubstage;
+        private final ModConfigSpec.IntValue statPointsPerRealm;
+        private final ModConfigSpec.IntValue dailyResetIntervalDays;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -273,6 +277,30 @@ public final class MurimConfig {
                     .define("techniquesHarmPlayers", true);
 
             builder.pop();
+            builder.comment("The System: stat points and quests").push("system");
+
+            statPointPower = builder
+                    .comment("Global multiplier on what one stat point is worth.",
+                            "Scales all four stats at once without touching their relative value.")
+                    .defineInRange("statPointPower", 1.0D, 0.0D, 100.0D);
+
+            statPointsPerSubstage = builder
+                    .comment("Stat points granted for each substage cleared.")
+                    .defineInRange("statPointsPerSubstage", 1, 0, 1000);
+
+            statPointsPerRealm = builder
+                    .comment("Extra stat points granted for a realm breakthrough, on top of",
+                            "the substage award.")
+                    .defineInRange("statPointsPerRealm", 3, 0, 1000);
+
+            dailyResetIntervalDays = builder
+                    .comment("In-game days between daily quest resets. 1 means every dawn.",
+                            "A Minecraft day is twenty minutes and sleeping skips the night, so at",
+                            "1 a player can clear roughly three sets an hour; raise this if that",
+                            "makes dailies the fastest route through the realms on your server.")
+                    .defineInRange("dailyResetIntervalDays", 1, 1, 1000);
+
+            builder.pop();
             builder.comment("Performance and presentation").push("general");
 
             cultivationTickInterval = builder
@@ -447,6 +475,22 @@ public final class MurimConfig {
 
     public static boolean techniquesHarmPlayers() {
         return VALUES.techniquesHarmPlayers.get();
+    }
+
+    public static double statPointPower() {
+        return VALUES.statPointPower.get();
+    }
+
+    public static int statPointsPerSubstage() {
+        return VALUES.statPointsPerSubstage.get();
+    }
+
+    public static int statPointsPerRealm() {
+        return VALUES.statPointsPerRealm.get();
+    }
+
+    public static int dailyResetIntervalDays() {
+        return VALUES.dailyResetIntervalDays.get();
     }
 
     public static int cultivationTickInterval() {

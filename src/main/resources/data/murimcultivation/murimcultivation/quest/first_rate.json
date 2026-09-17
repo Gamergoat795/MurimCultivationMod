@@ -1,0 +1,35 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.first_rate",
+  "description_key": "murimcultivation.quest.first_rate.description",
+  "required_realm_tier": 3,
+  "prerequisites": [
+    "murimcultivation:second_rate"
+  ],
+  "objectives": [
+    {
+      "kind": "reach_realm",
+      "amount": 1,
+      "target": "murimcultivation:first_rate"
+    },
+    {
+      "kind": "open_meridians",
+      "amount": 4
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 600
+    },
+    {
+      "kind": "stat_points",
+      "amount": 4
+    },
+    {
+      "kind": "title",
+      "amount": 1,
+      "target": "murimcultivation:first_rate_martial_artist"
+    }
+  ]
+}

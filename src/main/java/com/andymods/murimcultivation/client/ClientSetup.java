@@ -2,6 +2,7 @@ package com.andymods.murimcultivation.client;
 
 import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.client.hud.CultivationHudLayer;
+import com.andymods.murimcultivation.client.hud.SystemToastLayer;
 import com.andymods.murimcultivation.client.hud.TechniqueBarLayer;
 import net.minecraft.client.KeyMapping;
 import net.neoforged.api.distmarker.Dist;
@@ -30,6 +31,7 @@ public final class ClientSetup {
     public static void registerGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAboveAll(MurimCultivationMod.id("cultivation_hud"), new CultivationHudLayer());
         event.registerAboveAll(MurimCultivationMod.id("technique_bar"), new TechniqueBarLayer());
+        event.registerAboveAll(MurimCultivationMod.id("system_toasts"), new SystemToastLayer());
     }
 
     private ClientSetup() {

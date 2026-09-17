@@ -1,6 +1,8 @@
 package com.andymods.murimcultivation;
 
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.system.SystemQuest;
+import com.andymods.murimcultivation.system.Title;
 import com.andymods.murimcultivation.technique.Technique;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
@@ -17,6 +19,8 @@ public final class MurimRegistries {
 
     public static final ResourceKey<Registry<Realm>> REALM = key("realm");
     public static final ResourceKey<Registry<Technique>> TECHNIQUE = key("technique");
+    public static final ResourceKey<Registry<SystemQuest>> QUEST = key("quest");
+    public static final ResourceKey<Registry<Title>> TITLE = key("title");
 
     private static <T> ResourceKey<Registry<T>> key(String path) {
         return ResourceKey.createRegistryKey(MurimCultivationMod.id(path));

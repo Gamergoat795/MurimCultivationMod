@@ -1,6 +1,9 @@
 package com.andymods.murimcultivation.cultivation;
 
 import com.andymods.murimcultivation.config.MurimConfig;
+import com.andymods.murimcultivation.system.QuestTracker;
+import com.andymods.murimcultivation.system.SystemNotification;
+import com.andymods.murimcultivation.system.SystemNotifications;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.particles.ParticleTypes;
@@ -214,13 +217,19 @@ public final class BreakthroughService {
 
         if (player.getRandom().nextDouble() < chance) {
             CultivationService.setRealm(player, nextHolder.key(), Substage.EARLY);
+            data.systemProgress().grantPoints(MurimConfig.statPointsPerRealm());
             celebrate(player, target, chance);
+            SystemNotifications.send(player, SystemNotification.realmAttained(target.fullDisplayName()));
+            // A new realm can satisfy a realm-gated objective and unlock further quests.
+            QuestTracker.evaluate(player);
             return Optional.of(Result.success(chance, target));
         }
 
         // Failure: the body could not hold the transition. Realm and substage are kept — the
         // player has not been demoted — but the Qi has turned on them.
         DeviationService.Outcome outcome = DeviationService.inflict(player, severityForFailedAttempt(chance, tuning));
+        SystemNotifications.send(player, SystemNotification.warning(
+                Component.translatable(outcome.severity().translationKey())));
         player.sendSystemMessage(Component.translatable("murimcultivation.breakthrough.failed",
                 formatPercent(chance)));
         return Optional.of(Result.failure(chance, target, outcome));

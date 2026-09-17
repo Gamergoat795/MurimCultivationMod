@@ -1,0 +1,30 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.tempered",
+  "description_key": "murimcultivation.quest.tempered.description",
+  "required_realm_tier": 2,
+  "prerequisites": [
+    "murimcultivation:second_rate"
+  ],
+  "objectives": [
+    {
+      "kind": "survive_deviation",
+      "amount": 1
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 300
+    },
+    {
+      "kind": "purity",
+      "amount": 5
+    },
+    {
+      "kind": "title",
+      "amount": 1,
+      "target": "murimcultivation:tempered_by_failure"
+    }
+  ]
+}

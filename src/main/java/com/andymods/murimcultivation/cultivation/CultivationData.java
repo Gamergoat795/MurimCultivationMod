@@ -4,6 +4,8 @@ import com.andymods.murimcultivation.MurimRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceKey;
+import com.andymods.murimcultivation.system.QuestLog;
+import com.andymods.murimcultivation.system.SystemProgress;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
@@ -52,8 +54,8 @@ public class CultivationData {
     private final Set<Meridian> openMeridians;
     private final Map<ResourceLocation, Double> techniqueMastery;
     private final List<ResourceLocation> loadout;
-    private int statPoints;
-    private final Set<ResourceLocation> titles;
+    private final SystemProgress systemProgress;
+    private final QuestLog questLog;
     private final Map<ResourceLocation, Integer> sectReputation;
     private DeviationSeverity deviation;
     private int deviationTicks;
@@ -80,9 +82,9 @@ public class CultivationData {
                     .forGetter(data -> Map.copyOf(data.techniqueMastery)),
             ResourceLocation.CODEC.listOf().optionalFieldOf("loadout", List.of())
                     .forGetter(data -> List.copyOf(data.loadout)),
-            Codec.INT.optionalFieldOf("stat_points", 0).forGetter(CultivationData::statPoints),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("titles", List.of())
-                    .forGetter(data -> List.copyOf(data.titles)),
+            SystemProgress.CODEC.optionalFieldOf("system_progress", new SystemProgress())
+                    .forGetter(CultivationData::systemProgress),
+            QuestLog.CODEC.optionalFieldOf("quest_log", new QuestLog()).forGetter(CultivationData::questLog),
             Codec.unboundedMap(ResourceLocation.CODEC, Codec.INT).optionalFieldOf("sect_reputation", Map.of())
                     .forGetter(data -> Map.copyOf(data.sectReputation)),
             DeviationSeverity.CODEC.optionalFieldOf("deviation", DeviationSeverity.NONE)
@@ -93,7 +95,8 @@ public class CultivationData {
     /** A fresh, un-awakened cultivator. Used by the attachment's default supplier. */
     public CultivationData() {
         this(Optional.empty(), Substage.EARLY, 0.0D, 0.0D, DEFAULT_PURITY, false,
-                List.of(), Map.of(), List.of(), 0, List.of(), Map.of(), DeviationSeverity.NONE, 0);
+                List.of(), Map.of(), List.of(), new SystemProgress(), new QuestLog(),
+                Map.of(), DeviationSeverity.NONE, 0);
     }
 
     public CultivationData(Optional<ResourceKey<Realm>> realm,
@@ -105,8 +108,8 @@ public class CultivationData {
                            List<Meridian> openMeridians,
                            Map<ResourceLocation, Double> techniqueMastery,
                            List<ResourceLocation> loadout,
-                           int statPoints,
-                           List<ResourceLocation> titles,
+                           SystemProgress systemProgress,
+                           QuestLog questLog,
                            Map<ResourceLocation, Integer> sectReputation,
                            DeviationSeverity deviation,
                            int deviationTicks) {
@@ -119,8 +122,8 @@ public class CultivationData {
         this.openMeridians = openMeridians.isEmpty() ? EnumSet.noneOf(Meridian.class) : EnumSet.copyOf(openMeridians);
         this.techniqueMastery = new HashMap<>(techniqueMastery);
         this.loadout = new ArrayList<>(loadout);
-        this.statPoints = statPoints;
-        this.titles = new LinkedHashSet<>(titles);
+        this.systemProgress = systemProgress;
+        this.questLog = questLog;
         this.sectReputation = new HashMap<>(sectReputation);
         this.deviation = deviation;
         this.deviationTicks = Math.max(0, deviationTicks);
@@ -438,26 +441,22 @@ public class CultivationData {
         return expired;
     }
 
-    // --- System progression (populated in M4) -----------------------------------------
+    // --- System progression -----------------------------------------------------------
 
-    public int statPoints() {
-        return statPoints;
+    /**
+     * Stat points, allocations and titles.
+     *
+     * <p>Nested rather than held as loose fields because {@code RecordCodecBuilder.group} caps
+     * at sixteen fields and this class was two from the limit. Grouping cohesive state costs one
+     * field instead of four.
+     */
+    public SystemProgress systemProgress() {
+        return systemProgress;
     }
 
-    public void setStatPoints(int statPoints) {
-        this.statPoints = Math.max(0, statPoints);
-    }
-
-    public void addStatPoints(int amount) {
-        setStatPoints(this.statPoints + amount);
-    }
-
-    public Set<ResourceLocation> titles() {
-        return Collections.unmodifiableSet(titles);
-    }
-
-    public boolean grantTitle(ResourceLocation title) {
-        return titles.add(title);
+    /** Quest progress, completions and the daily reset marker. */
+    public QuestLog questLog() {
+        return questLog;
     }
 
     // --- Sects (populated in M5) ------------------------------------------------------
@@ -564,9 +563,8 @@ public class CultivationData {
         this.techniqueMastery.putAll(source.techniqueMastery);
         this.loadout.clear();
         this.loadout.addAll(source.loadout);
-        this.statPoints = source.statPoints;
-        this.titles.clear();
-        this.titles.addAll(source.titles);
+        this.systemProgress.copyFrom(source.systemProgress);
+        this.questLog.copyFrom(source.questLog);
         this.sectReputation.clear();
         this.sectReputation.putAll(source.sectReputation);
         this.deviation = source.deviation;

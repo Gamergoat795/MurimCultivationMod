@@ -1,0 +1,27 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.first_art",
+  "description_key": "murimcultivation.quest.first_art.description",
+  "required_realm_tier": 1,
+  "prerequisites": [
+    "murimcultivation:first_breath"
+  ],
+  "objectives": [
+    {
+      "kind": "learn_technique",
+      "amount": 1,
+      "target": "murimcultivation:qinggong"
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 60
+    },
+    {
+      "kind": "item",
+      "amount": 1,
+      "target": "murimcultivation:martial_manual"
+    }
+  ]
+}

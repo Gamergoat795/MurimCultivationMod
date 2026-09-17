@@ -1,6 +1,8 @@
 package com.andymods.murimcultivation.cultivation;
 
 import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.system.QuestCategory;
+import com.andymods.murimcultivation.system.StatType;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.SharedConstants;
@@ -50,8 +52,15 @@ class CultivationDataCodecTest {
         data.openMeridian(Meridian.GOVERNING_VESSEL);
         data.setTechniqueMastery(ResourceLocation.fromNamespaceAndPath("murimcultivation", "sword_qi"), 42);
         data.setLoadout(List.of(ResourceLocation.fromNamespaceAndPath("murimcultivation", "sword_qi")));
-        data.setStatPoints(7);
-        data.grantTitle(ResourceLocation.fromNamespaceAndPath("murimcultivation", "sword_saint"));
+        data.systemProgress().grantPoints(7);
+        data.systemProgress().grantTitle(
+                ResourceLocation.fromNamespaceAndPath("murimcultivation", "sword_saint"));
+        data.systemProgress().equipTitle(
+                ResourceLocation.fromNamespaceAndPath("murimcultivation", "sword_saint"));
+        data.systemProgress().spend(StatType.BODY, 3);
+        data.questLog().complete(
+                ResourceLocation.fromNamespaceAndPath("murimcultivation", "first_breath"),
+                QuestCategory.STORY);
         data.addSectReputation(ResourceLocation.fromNamespaceAndPath("murimcultivation", "murim_alliance"), 250);
         data.applyDeviation(DeviationSeverity.REVERSE_FLOW);
         return data;
@@ -78,8 +87,12 @@ class CultivationDataCodecTest {
         assertEquals(original.openMeridians(), restored.openMeridians());
         assertEquals(original.techniqueMastery(), restored.techniqueMastery());
         assertEquals(original.loadout(), restored.loadout());
-        assertEquals(original.statPoints(), restored.statPoints());
-        assertEquals(original.titles(), restored.titles());
+        assertEquals(original.systemProgress().unspentPoints(), restored.systemProgress().unspentPoints());
+        assertEquals(original.systemProgress().allocations(), restored.systemProgress().allocations());
+        assertEquals(original.systemProgress().titles(), restored.systemProgress().titles());
+        assertEquals(original.systemProgress().equippedTitle(), restored.systemProgress().equippedTitle());
+        assertEquals(original.questLog().completed(), restored.questLog().completed());
+        assertEquals(original.questLog().lastDailyResetDay(), restored.questLog().lastDailyResetDay());
         assertEquals(original.sectReputation(), restored.sectReputation());
         assertEquals(original.deviation(), restored.deviation());
         assertEquals(original.deviationTicks(), restored.deviationTicks());
@@ -114,12 +127,18 @@ class CultivationDataCodecTest {
             assertFalse(lower.contains("max") || lower.contains("capacity"),
                     "unexpected stored maximum in save data: " + key);
         }
+        // A fresh cultivator's default state must also be free of one.
+        assertFalse(encoded.getAllKeys().isEmpty(), "the encoded form should not be empty");
     }
 
     @Test
     void aDefaultCultivatorIsAnOrdinaryPerson() {
         CultivationData fresh = new CultivationData();
         assertFalse(fresh.isAwakened(), "a new player has not awakened");
+        assertEquals(0, fresh.systemProgress().unspentPoints());
+        assertEquals(0, fresh.systemProgress().totalSpent());
+        assertTrue(fresh.systemProgress().titles().isEmpty());
+        assertTrue(fresh.questLog().completed().isEmpty());
         assertEquals(Optional.empty(), fresh.realmKey(), "a new player is not on the ladder yet");
         assertEquals(0.0D, fresh.qi(), 1.0e-9D);
         assertEquals(0.0D, fresh.progress(), 1.0e-9D);

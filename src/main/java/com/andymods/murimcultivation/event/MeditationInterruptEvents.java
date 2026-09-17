@@ -6,9 +6,12 @@ import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.EnlightenmentService;
 import com.andymods.murimcultivation.cultivation.MeditationService;
+import com.andymods.murimcultivation.system.ObjectiveKind;
+import com.andymods.murimcultivation.system.QuestTracker;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 
@@ -55,6 +58,15 @@ public final class MeditationInterruptEvents {
         if (event.getEntity() instanceof ServerPlayer player
                 && CultivationService.data(player).isMeditating()) {
             MeditationService.stop(player, MeditationService.Interruption.ATTACKED);
+        }
+    }
+
+    /** A kill counts toward any quest asking for one. */
+    @SubscribeEvent
+    public static void onLivingDeath(LivingDeathEvent event) {
+        if (event.getSource().getEntity() instanceof ServerPlayer killer
+                && CultivationService.data(killer).isAwakened()) {
+            QuestTracker.recordProgress(killer, ObjectiveKind.KILL_ENTITIES, 1);
         }
     }
 

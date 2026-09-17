@@ -134,6 +134,14 @@ def check_translation_keys() -> None:
             "src/main/java/com/andymods/murimcultivation/technique/HandRequirement.java"),
         # MartialManualItem derives a technique's name from its id.
         f"{MODID}.technique.": datapack_ids("technique"),
+        f"{MODID}.quest.": datapack_ids("quest") + [f"{q}.description" for q in datapack_ids("quest")],
+        f"{MODID}.title.": datapack_ids("title") + ["not_owned"],
+        f"{MODID}.stat.": [s for stat in ("body", "force", "meridian", "insight")
+                           for s in (stat, f"{stat}.description")] + ["cannot_spend"],
+        f"{MODID}.objective.": enum_ids("src/main/java/com/andymods/murimcultivation/system/ObjectiveKind.java"),
+        f"{MODID}.reward.": enum_ids("src/main/java/com/andymods/murimcultivation/system/RewardKind.java"),
+        f"{MODID}.quest_category.": enum_ids(
+            "src/main/java/com/andymods/murimcultivation/system/QuestCategory.java"),
         # One key per loadout slot, numbered from 1.
         "key." + MODID + ".technique_slot_": [str(i) for i in range(1, 5)],
     }
@@ -154,9 +162,12 @@ def check_translation_keys() -> None:
         for suffix in suffixes:
             referenced.add(prefix + suffix)
 
-    for registry in ("realm", "technique"):
+    for registry in ("realm", "technique", "quest", "title"):
         for path in glob.glob(f"{DATA_DIR}/{registry}/*.json"):
-            referenced.add(json.load(open(path, encoding="utf-8"))["translation_key"])
+            document = json.load(open(path, encoding="utf-8"))
+            referenced.add(document["translation_key"])
+            if "description_key" in document:
+                referenced.add(document["description_key"])
 
     for key in sorted(referenced - defined):
         fail(f"translation key referenced but not defined: {key}")
@@ -216,6 +227,92 @@ def check_datapack_consistency() -> None:
     if len(castable) < 2:
         fail(f"the starting realm (tier {starting['tier']}) can cast only {castable}; "
              f"a new cultivator should have at least two usable arts")
+
+    check_quest_consistency(realms, techniques)
+
+
+def check_quest_consistency(realms: list, techniques: dict) -> None:
+    """Quest graph invariants that span files.
+
+    A quest chain is a graph spread across one file per node, so the ways it breaks — a
+    prerequisite that does not exist, a cycle, an objective naming a technique that was
+    renamed, a gate a prerequisite can never satisfy — are all invisible from any single file.
+    """
+    quests = {os.path.basename(p)[:-len(".json")]: json.load(open(p, encoding="utf-8"))
+              for p in glob.glob(f"{DATA_DIR}/quest/*.json")}
+    titles = set(datapack_ids("title"))
+    if not quests:
+        return
+
+    def local(identifier: str) -> str:
+        return identifier.split(":", 1)[-1]
+
+    realm_tiers = {}
+    for realm in realms:
+        realm_tiers[local(realm["translation_key"].rsplit(".", 1)[-1])] = realm["tier"]
+
+    for name, quest in sorted(quests.items()):
+        # Prerequisites must exist, or the quest is permanently unreachable.
+        for prerequisite in quest.get("prerequisites", []):
+            if local(prerequisite) not in quests:
+                fail(f"quest {name}: prerequisite does not exist: {prerequisite}")
+
+        # A prerequisite gated above this quest makes this quest's own gate a lie.
+        for prerequisite in quest.get("prerequisites", []):
+            parent = quests.get(local(prerequisite))
+            if parent and parent.get("required_realm_tier", 0) > quest.get("required_realm_tier", 0):
+                fail(f"quest {name}: gated at realm tier {quest.get('required_realm_tier', 0)} but "
+                     f"its prerequisite {local(prerequisite)} needs tier "
+                     f"{parent.get('required_realm_tier', 0)}")
+
+        for objective in quest["objectives"]:
+            target = objective.get("target")
+            if target is None:
+                continue
+            kind = objective["kind"]
+            if kind in ("learn_technique", "cast_technique", "master_technique"):
+                if local(target) not in techniques:
+                    fail(f"quest {name}: objective {kind} names an unknown technique: {target}")
+            elif kind == "reach_realm" and local(target) not in realm_tiers:
+                fail(f"quest {name}: objective reach_realm names an unknown realm: {target}")
+
+        for reward in quest.get("rewards", []):
+            target = reward.get("target")
+            if target is None:
+                continue
+            if reward["kind"] == "technique" and local(target) not in techniques:
+                fail(f"quest {name}: reward names an unknown technique: {target}")
+            if reward["kind"] == "title" and local(target) not in titles:
+                fail(f"quest {name}: reward names an unknown title: {target}")
+
+    # A cycle makes every quest in it unreachable, and nothing in one file reveals it.
+    visiting: set = set()
+    done: set = set()
+
+    def walk(node: str, trail: list) -> None:
+        if node in done:
+            return
+        if node in visiting:
+            fail(f"quest prerequisites form a cycle: {' -> '.join(trail + [node])}")
+            return
+        visiting.add(node)
+        for prerequisite in quests.get(node, {}).get("prerequisites", []):
+            parent = local(prerequisite)
+            if parent in quests:
+                walk(parent, trail + [node])
+        visiting.discard(node)
+        done.add(node)
+
+    for name in sorted(quests):
+        walk(name, [])
+
+    # A new cultivator must have something to do immediately.
+    lowest_tier = min(realm["tier"] for realm in realms)
+    openers = [name for name, quest in quests.items()
+               if not quest.get("prerequisites") and quest.get("required_realm_tier", 0) <= lowest_tier]
+    if not openers:
+        fail("no quest is available at the starting realm with no prerequisites; a new "
+             "cultivator would open the System window to an empty list")
 
 
 def main() -> int:

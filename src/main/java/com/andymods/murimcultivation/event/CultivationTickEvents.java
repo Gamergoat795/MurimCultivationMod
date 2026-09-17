@@ -7,6 +7,8 @@ import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.EnlightenmentService;
 import com.andymods.murimcultivation.cultivation.MeditationService;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.system.ObjectiveKind;
+import com.andymods.murimcultivation.system.QuestTracker;
 import com.andymods.murimcultivation.technique.TechniqueBehaviours;
 import com.andymods.murimcultivation.technique.TechniqueBuffs;
 import com.andymods.murimcultivation.technique.behaviour.MovementBehaviours;
@@ -77,10 +79,20 @@ public final class CultivationTickEvents {
             changed = true;
         }
 
+        if (data.isMeditating()) {
+            // One cultivation interval of meditation, in whole seconds.
+            QuestTracker.recordProgress(player, ObjectiveKind.MEDITATE_SECONDS, (int) Math.round(seconds));
+        }
+
         if (changed) {
             CultivationService.advanceSubstages(player);
+            // Threshold objectives — purity reached, meridians open — are re-read rather than
+            // pushed, so this is the cheapest place to notice they are satisfied.
+            QuestTracker.evaluate(player);
             CultivationService.syncValuesToClient(player);
         }
+
+        QuestTracker.checkDailyReset(player);
     }
 
     /**
@@ -96,6 +108,7 @@ public final class CultivationTickEvents {
         if (data.tickDeviation()) {
             player.displayClientMessage(
                     Component.translatable("murimcultivation.message.deviation_cleared"), true);
+            QuestTracker.recordProgress(player, ObjectiveKind.SURVIVE_DEVIATION, 1);
             CultivationService.syncToClient(player);
         }
 

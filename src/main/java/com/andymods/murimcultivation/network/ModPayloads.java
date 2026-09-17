@@ -47,6 +47,16 @@ public final class ModPayloads {
                 SetLoadoutPayload.STREAM_CODEC,
                 ServerPayloadHandler::handleSetLoadout);
 
+        registrar.playToServer(
+                SpendStatPointPayload.TYPE,
+                SpendStatPointPayload.STREAM_CODEC,
+                ServerPayloadHandler::handleSpendStatPoint);
+
+        registrar.playToServer(
+                EquipTitlePayload.TYPE,
+                EquipTitlePayload.STREAM_CODEC,
+                ServerPayloadHandler::handleEquipTitle);
+
         // Server -> client.
         //
         // These MUST stay as explicit lambdas rather than ClientPayloadHandler::handleX method
@@ -64,6 +74,11 @@ public final class ModPayloads {
                 SyncCultivationValuesPayload.TYPE,
                 SyncCultivationValuesPayload.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandler.handleSyncValues(payload, context));
+
+        registrar.playToClient(
+                SystemNotificationPayload.TYPE,
+                SystemNotificationPayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandler.handleSystemNotification(payload, context));
     }
 
     private ModPayloads() {

@@ -104,6 +104,39 @@ public final class ServerPayloadHandler {
         });
     }
 
+    public static void handleSpendStatPoint(SpendStatPointPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) {
+                return;
+            }
+            CultivationData data = CultivationService.data(player);
+            if (!data.systemProgress().spend(payload.stat(), payload.points())) {
+                player.displayClientMessage(
+                        Component.translatable("murimcultivation.stat.cannot_spend"), true);
+                return;
+            }
+            // Stats feed attributes, so the single recalculation path has to run.
+            CultivationService.applyAttributes(player);
+            CultivationService.syncToClient(player);
+        });
+    }
+
+    public static void handleEquipTitle(EquipTitlePayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) {
+                return;
+            }
+            CultivationData data = CultivationService.data(player);
+            if (!data.systemProgress().equipTitle(payload.title().orElse(null))) {
+                player.displayClientMessage(
+                        Component.translatable("murimcultivation.title.not_owned"), true);
+                return;
+            }
+            CultivationService.applyAttributes(player);
+            CultivationService.syncToClient(player);
+        });
+    }
+
     private ServerPayloadHandler() {
     }
 }

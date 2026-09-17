@@ -2,6 +2,8 @@ package com.andymods.murimcultivation;
 
 import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.system.SystemQuest;
+import com.andymods.murimcultivation.system.Title;
 import com.andymods.murimcultivation.technique.Technique;
 import com.andymods.murimcultivation.registry.ModAttachments;
 import com.andymods.murimcultivation.registry.ModDataComponents;
@@ -50,6 +52,8 @@ public class MurimCultivationMod {
         public static void registerDatapackRegistries(DataPackRegistryEvent.NewRegistry event) {
             event.dataPackRegistry(MurimRegistries.REALM, Realm.CODEC, Realm.CODEC);
             event.dataPackRegistry(MurimRegistries.TECHNIQUE, Technique.CODEC, Technique.CODEC);
+            event.dataPackRegistry(MurimRegistries.QUEST, SystemQuest.CODEC, SystemQuest.CODEC);
+            event.dataPackRegistry(MurimRegistries.TITLE, Title.CODEC, Title.CODEC);
         }
 
         private ModBusEvents() {

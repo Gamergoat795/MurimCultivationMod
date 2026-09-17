@@ -1,0 +1,26 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.practised_hand",
+  "description_key": "murimcultivation.quest.practised_hand.description",
+  "required_realm_tier": 2,
+  "prerequisites": [
+    "murimcultivation:first_art"
+  ],
+  "objectives": [
+    {
+      "kind": "master_technique",
+      "amount": 25,
+      "target": "murimcultivation:qinggong"
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 250
+    },
+    {
+      "kind": "stat_points",
+      "amount": 1
+    }
+  ]
+}

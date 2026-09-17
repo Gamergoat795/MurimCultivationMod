@@ -1,0 +1,12 @@
+{
+  "translation_key": "murimcultivation.title.tempered_by_failure",
+  "hangul": "단련",
+  "color": 16766287,
+  "attributes": [
+    {
+      "attribute": "minecraft:generic.armor",
+      "amount": 1.0,
+      "operation": "add_value"
+    }
+  ]
+}

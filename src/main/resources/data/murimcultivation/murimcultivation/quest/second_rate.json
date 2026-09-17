@@ -1,0 +1,31 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.second_rate",
+  "description_key": "murimcultivation.quest.second_rate.description",
+  "required_realm_tier": 2,
+  "prerequisites": [
+    "murimcultivation:open_the_way"
+  ],
+  "objectives": [
+    {
+      "kind": "reach_realm",
+      "amount": 1,
+      "target": "murimcultivation:second_rate"
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 150
+    },
+    {
+      "kind": "stat_points",
+      "amount": 2
+    },
+    {
+      "kind": "title",
+      "amount": 1,
+      "target": "murimcultivation:no_longer_nameless"
+    }
+  ]
+}

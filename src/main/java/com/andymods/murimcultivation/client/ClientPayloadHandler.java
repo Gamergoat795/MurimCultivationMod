@@ -2,7 +2,9 @@ package com.andymods.murimcultivation.client;
 
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.network.SyncCultivationPayload;
+import com.andymods.murimcultivation.client.hud.SystemToastLayer;
 import com.andymods.murimcultivation.network.SyncCultivationValuesPayload;
+import com.andymods.murimcultivation.network.SystemNotificationPayload;
 import com.andymods.murimcultivation.registry.ModAttachments;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
@@ -49,6 +51,10 @@ public final class ClientPayloadHandler {
             local.setPurity(payload.purity());
             local.setMeditating(payload.meditating());
         });
+    }
+
+    public static void handleSystemNotification(SystemNotificationPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> SystemToastLayer.push(payload.notification()));
     }
 
     private ClientPayloadHandler() {

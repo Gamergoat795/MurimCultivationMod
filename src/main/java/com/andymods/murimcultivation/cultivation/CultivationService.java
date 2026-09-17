@@ -1,7 +1,11 @@
 package com.andymods.murimcultivation.cultivation;
 
 import com.andymods.murimcultivation.MurimCultivationMod;
+import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.config.MurimConfig;
+import com.andymods.murimcultivation.system.QuestTracker;
+import com.andymods.murimcultivation.system.StatType;
+import com.andymods.murimcultivation.system.Title;
 import com.andymods.murimcultivation.network.SyncCultivationPayload;
 import com.andymods.murimcultivation.network.SyncCultivationValuesPayload;
 import com.andymods.murimcultivation.registry.ModAttachments;
@@ -65,9 +69,15 @@ public final class CultivationService {
         double base = realmOf(registry, data).map(Realm::qiCapacity).orElse(100.0D);
         int primary = data.openMeridianCount() - data.openExtraordinaryCount();
         int extraordinary = data.openExtraordinaryCount();
+        // The Meridian stat widens the network's capacity directly. It is applied here rather
+        // than as an attribute modifier because Qi capacity is this mod's own derived value,
+        // not a vanilla attribute.
+        double fromStats = StatType.MERIDIAN.bonusFor(
+                data.systemProgress().pointsIn(StatType.MERIDIAN), MurimConfig.statPointPower());
         return base
                 + primary * MurimConfig.qiPerPrimaryMeridian()
-                + extraordinary * MurimConfig.qiPerExtraordinaryVessel();
+                + extraordinary * MurimConfig.qiPerExtraordinaryVessel()
+                + fromStats;
     }
 
     public static double qiCapacity(Player player) {
@@ -90,6 +100,17 @@ public final class CultivationService {
         return realmOf(registry, data)
                 .map(realm -> realm.progressToLeave(data.substage()))
                 .orElse(Double.MAX_VALUE);
+    }
+
+    /**
+     * How much faster this cultivator accrues progress, from the Insight stat.
+     *
+     * <p>1.0 means unmodified. Applied by {@code MeditationService.cultivate}, which is the one
+     * place cultivation progress is produced.
+     */
+    public static double cultivationRateMultiplier(CultivationData data) {
+        return 1.0D + StatType.INSIGHT.bonusFor(
+                data.systemProgress().pointsIn(StatType.INSIGHT), MurimConfig.statPointPower());
     }
 
     /** Fraction of the way to the next step, 0..1, for HUD bars. */
@@ -127,7 +148,9 @@ public final class CultivationService {
         }
 
         if (gained > 0) {
-            applyRealmAttributes(player);
+            data.systemProgress().grantPoints(gained * MurimConfig.statPointsPerSubstage());
+            applyAttributes(player);
+            QuestTracker.evaluate(player);
             syncToClient(player);
         }
         return gained;
@@ -152,7 +175,13 @@ public final class CultivationService {
     }
 
     /**
-     * Recomputes every attribute modifier this mod owns.
+     * Recomputes every attribute modifier this mod owns: realm grants, spent stat points, and
+     * the equipped title.
+     *
+     * <p>One recalculation path, deliberately. Realms, stats and titles all feed the same
+     * attributes, and the moment each has its own apply-and-remove routine they start fighting
+     * over the same modifier slots and a bonus survives something it should not. Every caller
+     * that can change any of the three calls exactly this.
      *
      * <p>Modifiers are <em>transient</em>, so they are never written to the player's NBT and
      * cannot outlive the mod, but that also means they must be re-applied on every login,
@@ -161,51 +190,111 @@ public final class CultivationService {
      * <p>Notably this does not touch the player's current health. Topping a player up as a
      * side effect of recalculating their maximum turns every relog into a free heal.
      */
-    public static void applyRealmAttributes(ServerPlayer player) {
+    public static void applyAttributes(ServerPlayer player) {
         Registry<Realm> registry = realmRegistry(player);
+        CultivationData data = data(player);
 
-        // Strip our modifier from every attribute that any realm mentions, so switching to a
-        // realm that does not grant an attribute correctly drops the old bonus.
+        // Strip everything this mod owns first, so a source that no longer grants an attribute
+        // correctly drops its old bonus rather than leaving it stranded.
         for (Realm realm : registry) {
             for (AttributeGrant grant : realm.attributes()) {
-                AttributeInstance instance = player.getAttribute(grant.attribute());
-                if (instance != null) {
-                    instance.removeModifier(modifierId(grant.attribute()));
-                }
+                removeModifier(player, grant.attribute(), realmModifierId(grant.attribute()));
+            }
+        }
+        for (StatType stat : StatType.values()) {
+            if (stat.feedsAnAttribute()) {
+                removeModifier(player, stat.attribute(), statModifierId(stat));
+            }
+        }
+        for (Title title : titleRegistry(player)) {
+            for (AttributeGrant grant : title.attributes()) {
+                removeModifier(player, grant.attribute(), titleModifierId(grant.attribute()));
             }
         }
 
-        Optional<Realm> current = realmOf(registry, data(player));
-        if (current.isEmpty()) {
-            return;
-        }
-
-        for (AttributeGrant grant : current.get().attributes()) {
-            AttributeInstance instance = player.getAttribute(grant.attribute());
-            if (instance == null) {
-                continue;
+        realmOf(registry, data).ifPresent(realm -> {
+            for (AttributeGrant grant : realm.attributes()) {
+                addModifier(player, grant.attribute(), realmModifierId(grant.attribute()),
+                        grant.amount(), grant.operation());
             }
-            instance.addTransientModifier(new AttributeModifier(
-                    modifierId(grant.attribute()), grant.amount(), grant.operation()));
+        });
+
+        double statScale = MurimConfig.statPointPower();
+        for (StatType stat : StatType.values()) {
+            int points = data.systemProgress().pointsIn(stat);
+            if (points > 0 && stat.feedsAnAttribute()) {
+                addModifier(player, stat.attribute(), statModifierId(stat),
+                        stat.bonusFor(points, statScale), stat.operation());
+            }
         }
 
-        // A realm loss can lower max health below current health; clamp rather than leave the
+        data.systemProgress().equippedTitle()
+                .flatMap(id -> titleRegistry(player)
+                        .getOptional(ResourceKey.create(MurimRegistries.TITLE, id)))
+                .ifPresent(title -> {
+                    for (AttributeGrant grant : title.attributes()) {
+                        addModifier(player, grant.attribute(), titleModifierId(grant.attribute()),
+                                grant.amount(), grant.operation());
+                    }
+                });
+
+        // A lost bonus can lower max health below current health; clamp rather than leave the
         // player rendering more hearts than they have.
         if (player.getHealth() > player.getMaxHealth()) {
             player.setHealth(player.getMaxHealth());
         }
     }
 
+    /** Kept as the previous name so existing call sites read unchanged. */
+    public static void applyRealmAttributes(ServerPlayer player) {
+        applyAttributes(player);
+    }
+
+    public static Registry<Title> titleRegistry(Player player) {
+        return player.level().registryAccess().registryOrThrow(MurimRegistries.TITLE);
+    }
+
+    private static void addModifier(ServerPlayer player, Holder<Attribute> attribute,
+                                    ResourceLocation id, double amount,
+                                    AttributeModifier.Operation operation) {
+        AttributeInstance instance = player.getAttribute(attribute);
+        if (instance != null) {
+            instance.addTransientModifier(new AttributeModifier(id, amount, operation));
+        }
+    }
+
+    private static void removeModifier(ServerPlayer player, Holder<Attribute> attribute,
+                                       ResourceLocation id) {
+        AttributeInstance instance = player.getAttribute(attribute);
+        if (instance != null) {
+            instance.removeModifier(id);
+        }
+    }
+
     /**
-     * A stable, unique modifier id per attribute, e.g.
-     * {@code murimcultivation:realm_bonus/minecraft/generic.max_health}.
+     * A stable modifier id, namespaced by which system owns it.
+     *
+     * <p>Realms, stats and titles all touch the same attributes, so they need distinct ids or
+     * applying one would silently replace another.
      */
-    public static ResourceLocation modifierId(Holder<Attribute> attribute) {
+    private static ResourceLocation modifierId(String source, Holder<Attribute> attribute) {
         ResourceLocation attributeId = attribute.unwrapKey()
                 .map(ResourceKey::location)
                 .orElseGet(() -> MurimCultivationMod.id("unknown_attribute"));
         return MurimCultivationMod.id(
-                REALM_MODIFIER_PREFIX + "/" + attributeId.getNamespace() + "/" + attributeId.getPath());
+                source + "/" + attributeId.getNamespace() + "/" + attributeId.getPath());
+    }
+
+    public static ResourceLocation realmModifierId(Holder<Attribute> attribute) {
+        return modifierId(REALM_MODIFIER_PREFIX, attribute);
+    }
+
+    public static ResourceLocation titleModifierId(Holder<Attribute> attribute) {
+        return modifierId("title_bonus", attribute);
+    }
+
+    public static ResourceLocation statModifierId(StatType stat) {
+        return MurimCultivationMod.id("stat_bonus/" + stat.getSerializedName());
     }
 
     // --- Sync -------------------------------------------------------------------------
