@@ -15,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -39,18 +40,23 @@ public final class QuestTracker {
     private QuestTracker() {
     }
 
-    public static Registry<SystemQuest> registry(ServerPlayer player) {
+    /**
+     * Read-only queries take {@link Player} rather than {@code ServerPlayer} on purpose: the
+     * System screen calls them so that what a player sees is computed by the same code that
+     * decides completion, rather than by a client-side copy that can drift from it.
+     */
+    public static Registry<SystemQuest> registry(Player player) {
         return player.level().registryAccess().registryOrThrow(MurimRegistries.QUEST);
     }
 
-    public static Registry<Title> titleRegistry(ServerPlayer player) {
+    public static Registry<Title> titleRegistry(Player player) {
         return player.level().registryAccess().registryOrThrow(MurimRegistries.TITLE);
     }
 
     /**
      * Whether a quest is currently offered: right realm, prerequisites met, not already done.
      */
-    public static boolean isAvailable(ServerPlayer player, ResourceLocation id, SystemQuest quest) {
+    public static boolean isAvailable(Player player, ResourceLocation id, SystemQuest quest) {
         CultivationData data = CultivationService.data(player);
         QuestLog log = data.questLog();
 
@@ -68,7 +74,7 @@ public final class QuestTracker {
     }
 
     /** Every quest on offer right now. */
-    public static List<ResourceLocation> available(ServerPlayer player) {
+    public static List<ResourceLocation> available(Player player) {
         List<ResourceLocation> ids = new ArrayList<>();
         registry(player).entrySet().forEach(entry -> {
             ResourceLocation id = entry.getKey().location();
@@ -159,7 +165,7 @@ public final class QuestTracker {
      * Also used by the System screen to draw progress bars, so the number a player sees is the
      * same number completion is judged against.
      */
-    public static int currentValue(ServerPlayer player, CultivationData data,
+    public static int currentValue(Player player, CultivationData data,
                                    ResourceLocation questId, QuestObjective objective) {
         return switch (objective.kind()) {
             case REACH_REALM -> CultivationService.realmOf(player)
@@ -179,7 +185,7 @@ public final class QuestTracker {
         };
     }
 
-    private static boolean matchesRealm(ServerPlayer player, Realm realm, QuestObjective objective) {
+    private static boolean matchesRealm(Player player, Realm realm, QuestObjective objective) {
         return objective.target()
                 .flatMap(id -> CultivationService.realmRegistry(player)
                         .getOptional(ResourceKey.create(MurimRegistries.REALM, id)))
@@ -240,7 +246,7 @@ public final class QuestTracker {
         });
     }
 
-    private static Component titleName(ServerPlayer player, ResourceLocation id) {
+    private static Component titleName(Player player, ResourceLocation id) {
         return Optional.ofNullable(titleRegistry(player).get(ResourceKey.create(MurimRegistries.TITLE, id)))
                 .map(Title::fullDisplayName)
                 .orElseGet(() -> Component.literal(id.getPath()));

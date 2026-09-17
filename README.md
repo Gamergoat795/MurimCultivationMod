@@ -104,6 +104,41 @@ Four techniques can be bound at once. Slot 1 defaults to `R`; slots 2–4 ship u
 can assign keys that do not clash with your other mods, and `C` cycles the selected slot if
 you would rather use one cast key.
 
+## The System window
+
+Press `K`. A window only you can see, in four tabs:
+
+- **Status** — realm and substage, the three numbers as bars, the four stats with a spend
+  button each, and the titles you have earned. Click a title to wear it; click it again to take
+  it off.
+- **Meridians** — the twenty channels as a grid, twelve primary above and eight extraordinary
+  vessels below. Hovering shows the exact progress cost and deviation risk, computed by the same
+  functions the server charges with. Click a sealed channel to force it open.
+- **Arts** — what you have learned, its mastery, and which four are bound. Click to bind or
+  unbind a slot.
+- **Quests** — what the System is asking for, with live per-objective progress.
+
+Stat points come from clearing substages and breaking through realms. Body raises health, Force
+raises damage, Meridian widens your Qi capacity, and Insight makes you cultivate faster — a bet
+that the run is long enough to pay it back.
+
+Quests are datapack content, in two kinds. The story chain runs from awakening to First-Rate.
+Dailies reset each in-game day by default; because a Minecraft day is twenty minutes, that is
+configurable via `dailyResetIntervalDays`, and daily rewards are deliberately smaller than story
+rewards.
+
+## Keybinds
+
+| Key | Action |
+|---|---|
+| `B` | Meditate |
+| `X` | Attempt breakthrough |
+| `M` | Open the next sealed meridian |
+| `K` | Open the System window |
+| `R` | Use technique slot 1 |
+| unbound | Technique slots 2–4 — assign them yourself |
+| `C` | Cycle the selected technique slot |
+
 ## Extending it with a datapack
 
 Realms, techniques, quests and sects are all datapack-driven. You don't need to compile
@@ -113,6 +148,7 @@ anything to rebalance the mod or add content — drop JSON into a datapack:
 data/<your_pack>/murimcultivation/realm/my_realm.json
 data/<your_pack>/murimcultivation/technique/my_technique.json
 data/<your_pack>/murimcultivation/quest/my_quest.json
+data/<your_pack>/murimcultivation/title/my_title.json
 ```
 
 A technique names a *behaviour* that the mod implements in code, so a pack can ship "Greater

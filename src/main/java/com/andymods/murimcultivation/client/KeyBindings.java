@@ -49,6 +49,14 @@ public final class KeyBindings {
             techniqueSlot(4, InputConstants.UNKNOWN.getValue()),
     };
 
+    /** Opens the System window. */
+    public static final KeyMapping OPEN_SYSTEM = new KeyMapping(
+            "key.murimcultivation.open_system",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_K,
+            CATEGORY);
+
     /** Advances the selected slot, for players who would rather use one cast key than four. */
     public static final KeyMapping CYCLE_TECHNIQUE = new KeyMapping(
             "key.murimcultivation.cycle_technique",
@@ -70,12 +78,13 @@ public final class KeyBindings {
     public static final KeyMapping[] ALL = buildAll();
 
     private static KeyMapping[] buildAll() {
-        KeyMapping[] all = new KeyMapping[4 + TECHNIQUE_SLOTS.length];
+        KeyMapping[] all = new KeyMapping[5 + TECHNIQUE_SLOTS.length];
         all[0] = MEDITATE;
         all[1] = BREAKTHROUGH;
         all[2] = OPEN_MERIDIAN;
         all[3] = CYCLE_TECHNIQUE;
-        System.arraycopy(TECHNIQUE_SLOTS, 0, all, 4, TECHNIQUE_SLOTS.length);
+        all[4] = OPEN_SYSTEM;
+        System.arraycopy(TECHNIQUE_SLOTS, 0, all, 5, TECHNIQUE_SLOTS.length);
         return all;
     }
 

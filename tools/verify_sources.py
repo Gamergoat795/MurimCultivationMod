@@ -136,6 +136,7 @@ def check_translation_keys() -> None:
         f"{MODID}.technique.": datapack_ids("technique"),
         f"{MODID}.quest.": datapack_ids("quest") + [f"{q}.description" for q in datapack_ids("quest")],
         f"{MODID}.title.": datapack_ids("title") + ["not_owned"],
+        f"{MODID}.system.tab.": ["status", "meridians", "techniques", "quests"],
         f"{MODID}.stat.": [s for stat in ("body", "force", "meridian", "insight")
                            for s in (stat, f"{stat}.description")] + ["cannot_spend"],
         f"{MODID}.objective.": enum_ids("src/main/java/com/andymods/murimcultivation/system/ObjectiveKind.java"),

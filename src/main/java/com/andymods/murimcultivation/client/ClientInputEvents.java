@@ -7,6 +7,7 @@ import com.andymods.murimcultivation.cultivation.MeridianService;
 import com.andymods.murimcultivation.network.AttemptBreakthroughPayload;
 import com.andymods.murimcultivation.network.CycleTechniquePayload;
 import com.andymods.murimcultivation.network.OpenMeridianPayload;
+import com.andymods.murimcultivation.client.screen.SystemScreen;
 import com.andymods.murimcultivation.network.UseTechniquePayload;
 import com.andymods.murimcultivation.network.ToggleMeditationPayload;
 import net.minecraft.client.Minecraft;
@@ -34,6 +35,15 @@ public final class ClientInputEvents {
         }
 
         CultivationData data = CultivationService.data(minecraft.player);
+
+        while (KeyBindings.OPEN_SYSTEM.consumeClick()) {
+            if (!data.isAwakened()) {
+                minecraft.player.displayClientMessage(
+                        Component.translatable("murimcultivation.message.not_awakened"), true);
+                continue;
+            }
+            minecraft.setScreen(new SystemScreen());
+        }
 
         while (KeyBindings.MEDITATE.consumeClick()) {
             if (!data.isAwakened()) {
