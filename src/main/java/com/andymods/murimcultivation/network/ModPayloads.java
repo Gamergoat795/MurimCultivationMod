@@ -27,6 +27,11 @@ public final class ModPayloads {
                 AttemptBreakthroughPayload.STREAM_CODEC,
                 ServerPayloadHandler::handleAttemptBreakthrough);
 
+        registrar.playToServer(
+                OpenMeridianPayload.TYPE,
+                OpenMeridianPayload.STREAM_CODEC,
+                ServerPayloadHandler::handleOpenMeridian);
+
         // Server -> client.
         //
         // These MUST stay as explicit lambdas rather than ClientPayloadHandler::handleX method

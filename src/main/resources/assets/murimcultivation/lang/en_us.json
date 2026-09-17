@@ -83,5 +83,17 @@
   "murimcultivation.meditation.refused.in_liquid": "You cannot gather Qi while submerged.",
   "murimcultivation.meditation.refused.mounted": "Dismount before you cultivate.",
   "murimcultivation.enlightenment.meditation": "Insight! Something you had been circling falls into place.",
-  "murimcultivation.enlightenment.near_death": "On the edge of death, understanding arrives."
+  "murimcultivation.enlightenment.near_death": "On the edge of death, understanding arrives.",
+  "key.murimcultivation.open_meridian": "Open Next Meridian",
+  "murimcultivation.deviation.suffered": "Your Qi turns against you — %s!",
+  "murimcultivation.deviation.meridian_shattered": "Your %s tears shut.",
+  "murimcultivation.breakthrough.failed": "The transition collapses. You had %s odds.",
+  "murimcultivation.meridian.opened": "Your %s opens. (%s/%s)",
+  "murimcultivation.meridian.failed": "Your %s resists. The Qi rebounds.",
+  "murimcultivation.meridian.network_complete": "Every meridian and vessel stands open. Your Qi runs without obstruction.",
+  "murimcultivation.meridian.refused.not_awakened": "You cannot sense your meridians yet.",
+  "murimcultivation.meridian.refused.already_open": "That channel is already open.",
+  "murimcultivation.meridian.refused.deviation": "Settle your Qi before forcing another channel.",
+  "murimcultivation.meridian.refused.progress": "You have not cultivated enough to force this channel.",
+  "murimcultivation.meridian.refused.purity": "Your foundation is too coarse to survive opening a channel."
 }

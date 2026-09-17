@@ -42,6 +42,20 @@ public final class MurimConfig {
         private final ModConfigSpec.DoubleValue enlightenmentPurityGain;
         private final ModConfigSpec.DoubleValue enlightenmentNearDeathChance;
         private final ModConfigSpec.DoubleValue nearDeathHealthFraction;
+        private final ModConfigSpec.DoubleValue breakthroughPurityWeight;
+        private final ModConfigSpec.DoubleValue breakthroughMeridianWeight;
+        private final ModConfigSpec.DoubleValue breakthroughDensityWeight;
+        private final ModConfigSpec.DoubleValue breakthroughMinChance;
+        private final ModConfigSpec.DoubleValue breakthroughMaxChance;
+        private final ModConfigSpec.DoubleValue breakthroughMinorFailureChance;
+        private final ModConfigSpec.DoubleValue breakthroughSevereFailureChance;
+        private final ModConfigSpec.BooleanValue breakthroughLightning;
+        private final ModConfigSpec.DoubleValue meridianBaseCostInSubstages;
+        private final ModConfigSpec.DoubleValue meridianCostGrowthPerOpenNode;
+        private final ModConfigSpec.DoubleValue meridianPrimaryDeviationChance;
+        private final ModConfigSpec.DoubleValue meridianExtraordinaryDeviationChance;
+        private final ModConfigSpec.DoubleValue meridianPurityProtection;
+        private final ModConfigSpec.DoubleValue meridianMinimumPurity;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -155,6 +169,77 @@ public final class MurimConfig {
                     .comment("Extra maximum Qi granted by each of the eight open extraordinary vessels.")
                     .defineInRange("qiPerExtraordinaryVessel", 40.0D, 0.0D, 10000.0D);
 
+            meridianBaseCostInSubstages = builder
+                    .comment("Base cost to open a meridian, expressed as a multiple of the current",
+                            "realm's progress-per-substage. Denominated this way so the cost stays",
+                            "proportionate as the player climbs.")
+                    .defineInRange("baseCostInSubstages", 0.75D, 0.0D, 1000.0D);
+
+            meridianCostGrowthPerOpenNode = builder
+                    .comment("Each already-open node makes the next this much more expensive.")
+                    .defineInRange("costGrowthPerOpenNode", 0.12D, 0.0D, 100.0D);
+
+            meridianPrimaryDeviationChance = builder
+                    .comment("Chance that forcing a primary meridian open goes wrong, before",
+                            "foundation purity is taken into account.")
+                    .defineInRange("primaryDeviationChance", 0.12D, 0.0D, 1.0D);
+
+            meridianExtraordinaryDeviationChance = builder
+                    .comment("Chance that forcing an extraordinary vessel open goes wrong,",
+                            "before purity. Vessels are the hard part of the network.")
+                    .defineInRange("extraordinaryDeviationChance", 0.30D, 0.0D, 1.0D);
+
+            meridianPurityProtection = builder
+                    .comment("How much of the deviation risk a perfect foundation removes.",
+                            "1.0 means 100 purity is completely safe; 0.8 leaves a residual risk.")
+                    .defineInRange("purityProtection", 0.85D, 0.0D, 1.0D);
+
+            meridianMinimumPurity = builder
+                    .comment("Foundation purity required before attempting to open any node.")
+                    .defineInRange("minimumPurity", 25.0D, 0.0D, 100.0D);
+
+            builder.pop();
+            builder.comment("Breakthrough odds and consequences").push("breakthrough");
+
+            breakthroughPurityWeight = builder
+                    .comment("How much purity above the target realm's floor improves the odds,",
+                            "at full headroom. The main reward for patience.")
+                    .defineInRange("purityWeight", 0.35D, 0.0D, 10.0D);
+
+            breakthroughMeridianWeight = builder
+                    .comment("How much opening meridians beyond the requirement improves the odds,",
+                            "if every remaining node is open.")
+                    .defineInRange("meridianWeight", 0.20D, 0.0D, 10.0D);
+
+            breakthroughDensityWeight = builder
+                    .comment("How much the ambient Qi of the attempt location shifts the odds.",
+                            "Applied to the density multiplier's distance from 1.0, so a spirit",
+                            "vein helps and a barren waste hurts.")
+                    .defineInRange("densityWeight", 0.15D, 0.0D, 10.0D);
+
+            breakthroughMinChance = builder
+                    .comment("Floor on the success chance. A desperate attempt is never hopeless.")
+                    .defineInRange("minChance", 0.05D, 0.0D, 1.0D);
+
+            breakthroughMaxChance = builder
+                    .comment("Ceiling on the success chance. A breakthrough is never a formality.")
+                    .defineInRange("maxChance", 0.95D, 0.0D, 1.0D);
+
+            breakthroughMinorFailureChance = builder
+                    .comment("Failing an attempt with at least this chance causes only a Minor",
+                            "Blockage: bad luck on a well-prepared attempt should not be ruinous.")
+                    .defineInRange("minorFailureChance", 0.60D, 0.0D, 1.0D);
+
+            breakthroughSevereFailureChance = builder
+                    .comment("Failing an attempt with at least this chance causes Reverse Flow.",
+                            "Below it, the attempt was a gamble and shatters a meridian.")
+                    .defineInRange("severeFailureChance", 0.30D, 0.0D, 1.0D);
+
+            breakthroughLightning = builder
+                    .comment("Strike visual-only lightning on a successful breakthrough.",
+                            "Purely cosmetic: it cannot hurt the player or set anything alight.")
+                    .define("lightning", true);
+
             builder.pop();
             builder.comment("Performance and presentation").push("general");
 
@@ -254,6 +339,62 @@ public final class MurimConfig {
 
     public static double nearDeathHealthFraction() {
         return VALUES.nearDeathHealthFraction.get();
+    }
+
+    public static double breakthroughPurityWeight() {
+        return VALUES.breakthroughPurityWeight.get();
+    }
+
+    public static double breakthroughMeridianWeight() {
+        return VALUES.breakthroughMeridianWeight.get();
+    }
+
+    public static double breakthroughDensityWeight() {
+        return VALUES.breakthroughDensityWeight.get();
+    }
+
+    public static double breakthroughMinChance() {
+        return VALUES.breakthroughMinChance.get();
+    }
+
+    public static double breakthroughMaxChance() {
+        return VALUES.breakthroughMaxChance.get();
+    }
+
+    public static double breakthroughMinorFailureChance() {
+        return VALUES.breakthroughMinorFailureChance.get();
+    }
+
+    public static double breakthroughSevereFailureChance() {
+        return VALUES.breakthroughSevereFailureChance.get();
+    }
+
+    public static boolean breakthroughLightning() {
+        return VALUES.breakthroughLightning.get();
+    }
+
+    public static double meridianBaseCostInSubstages() {
+        return VALUES.meridianBaseCostInSubstages.get();
+    }
+
+    public static double meridianCostGrowthPerOpenNode() {
+        return VALUES.meridianCostGrowthPerOpenNode.get();
+    }
+
+    public static double meridianPrimaryDeviationChance() {
+        return VALUES.meridianPrimaryDeviationChance.get();
+    }
+
+    public static double meridianExtraordinaryDeviationChance() {
+        return VALUES.meridianExtraordinaryDeviationChance.get();
+    }
+
+    public static double meridianPurityProtection() {
+        return VALUES.meridianPurityProtection.get();
+    }
+
+    public static double meridianMinimumPurity() {
+        return VALUES.meridianMinimumPurity.get();
     }
 
     public static int cultivationTickInterval() {

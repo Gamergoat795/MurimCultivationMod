@@ -67,12 +67,20 @@ public final class QiDensity {
     /**
      * Height above or depth below sea level both help, which is why hermits pick mountain
      * peaks and deep caves rather than the middle of a plain.
+     *
+     * <p>The arithmetic is separated from the config lookup so the balance curve can be unit
+     * tested. Reading config inside the formula makes it unreachable from a test, because
+     * {@code ModConfigSpec} values throw until a world has loaded them.
      */
+    public static double altitudeMultiplier(int y, double bonusPerBlock, double bonusCap) {
+        int distance = Math.abs(y - NEUTRAL_ALTITUDE);
+        return 1.0D + Math.min(bonusCap, distance * bonusPerBlock);
+    }
+
     public static double altitudeMultiplier(BlockPos pos) {
-        int distance = Math.abs(pos.getY() - NEUTRAL_ALTITUDE);
-        double bonus = Math.min(MurimConfig.qiDensityAltitudeBonusCap(),
-                distance * MurimConfig.qiDensityAltitudeBonusPerBlock());
-        return 1.0D + bonus;
+        return altitudeMultiplier(pos.getY(),
+                MurimConfig.qiDensityAltitudeBonusPerBlock(),
+                MurimConfig.qiDensityAltitudeBonusCap());
     }
 
     /** Night is the traditional hour for cultivation. */

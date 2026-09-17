@@ -5,7 +5,10 @@ import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.cultivation.BreakthroughService;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
+import com.andymods.murimcultivation.cultivation.DeviationService;
+import com.andymods.murimcultivation.cultivation.DeviationSeverity;
 import com.andymods.murimcultivation.cultivation.Meridian;
+import com.andymods.murimcultivation.cultivation.QiDensity;
 import com.andymods.murimcultivation.cultivation.Realm;
 import com.andymods.murimcultivation.cultivation.RealmProgression;
 import com.andymods.murimcultivation.cultivation.Substage;
@@ -105,6 +108,18 @@ public final class MurimCommand {
 
         root.then(Commands.literal("breakthrough").executes(MurimCommand::forceBreakthroughCheck));
 
+        root.then(Commands.literal("chance").executes(MurimCommand::showBreakthroughChance));
+
+        root.then(Commands.literal("deviate")
+                .then(Commands.argument("severity", StringArgumentType.word())
+                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                Arrays.stream(DeviationSeverity.values())
+                                        .map(DeviationSeverity::getSerializedName),
+                                builder))
+                        .executes(MurimCommand::inflictDeviation)));
+
+        root.then(Commands.literal("cure").executes(MurimCommand::cureDeviation));
+
         dispatcher.register(root);
     }
 
@@ -131,6 +146,12 @@ public final class MurimCommand {
         send(context, Component.literal("Deviation: " + data.deviation().getSerializedName()
                 + (data.deviation().isActive() ? " (" + data.deviationTicks() + " ticks left)" : "")));
         send(context, Component.literal("Breakthrough: " + BreakthroughService.check(player).name()));
+        send(context, Component.literal(String.format(Locale.ROOT, "Ambient Qi: %.2fx (%s)",
+                QiDensity.multiplierFor(player),
+                QiDensity.qualityOf(QiDensity.multiplierFor(player)).name())));
+        BreakthroughService.successChanceForNextRealm(player).ifPresent(chance ->
+                send(context, Component.literal(String.format(Locale.ROOT,
+                        "Breakthrough chance: %.1f%%", chance * 100.0D))));
         return 1;
     }
 
@@ -253,6 +274,57 @@ public final class MurimCommand {
         }
         BreakthroughService.attempt(player);
         return 1;
+    }
+
+    private static int showBreakthroughChance(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        Optional<Double> chance = BreakthroughService.successChanceForNextRealm(player);
+        if (chance.isEmpty()) {
+            send(context, Component.literal("No next realm; nothing to break through to."));
+            return 0;
+        }
+        send(context, Component.literal(String.format(Locale.ROOT,
+                "Breakthrough chance: %.1f%%  (ambient Qi %.2fx, would fail as %s)",
+                chance.get() * 100.0D,
+                QiDensity.multiplierFor(player),
+                BreakthroughService.severityForFailedAttempt(chance.get()).getSerializedName())));
+        return 1;
+    }
+
+    private static int inflictDeviation(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        String name = StringArgumentType.getString(context, "severity").toLowerCase(Locale.ROOT);
+        Optional<DeviationSeverity> severity = Arrays.stream(DeviationSeverity.values())
+                .filter(value -> value.getSerializedName().equals(name))
+                .findFirst();
+
+        if (severity.isEmpty()) {
+            send(context, Component.literal("Unknown severity: " + name));
+            return 0;
+        }
+        if (!severity.get().isActive()) {
+            DeviationService.cure(player);
+            send(context, Component.literal("Deviation cleared."));
+            return 1;
+        }
+
+        DeviationService.Outcome outcome = DeviationService.inflict(player, severity.get());
+        send(context, Component.literal(String.format(Locale.ROOT,
+                "Inflicted %s: lost %.1f progress%s",
+                outcome.severity().getSerializedName(),
+                outcome.progressLost(),
+                outcome.shatteredAMeridian() ? ", shattered " + outcome.meridianClosed().getSerializedName() : "")));
+        return 1;
+    }
+
+    private static int cureDeviation(CommandContext<CommandSourceStack> context)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        boolean cured = DeviationService.cure(player);
+        send(context, Component.literal(cured ? "Deviation cured." : "No active deviation."));
+        return cured ? 1 : 0;
     }
 
     // --- Helpers ----------------------------------------------------------------------

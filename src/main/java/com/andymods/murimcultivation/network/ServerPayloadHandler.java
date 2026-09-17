@@ -4,6 +4,7 @@ import com.andymods.murimcultivation.cultivation.BreakthroughService;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.MeditationService;
+import com.andymods.murimcultivation.cultivation.MeridianService;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -50,6 +51,15 @@ public final class ServerPayloadHandler {
             // Breaking through breaks concentration either way.
             CultivationService.data(player).setMeditating(false);
             BreakthroughService.attempt(player);
+        });
+    }
+
+    public static void handleOpenMeridian(OpenMeridianPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer player) {
+                // MeridianService owns the cost, the purity gate and the deviation roll.
+                MeridianService.open(player, payload.meridian());
+            }
         });
     }
 

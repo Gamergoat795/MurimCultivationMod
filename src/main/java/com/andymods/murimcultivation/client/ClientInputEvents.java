@@ -3,7 +3,9 @@ package com.andymods.murimcultivation.client;
 import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
+import com.andymods.murimcultivation.cultivation.MeridianService;
 import com.andymods.murimcultivation.network.AttemptBreakthroughPayload;
+import com.andymods.murimcultivation.network.OpenMeridianPayload;
 import com.andymods.murimcultivation.network.ToggleMeditationPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -38,6 +40,19 @@ public final class ClientInputEvents {
                 continue;
             }
             PacketDistributor.sendToServer(ToggleMeditationPayload.INSTANCE);
+        }
+
+        while (KeyBindings.OPEN_MERIDIAN.consumeClick()) {
+            if (!data.isAwakened()) {
+                minecraft.player.displayClientMessage(
+                        Component.translatable("murimcultivation.message.not_awakened"), true);
+                continue;
+            }
+            // The client only picks which node to ask for; the server decides whether it opens.
+            MeridianService.nextSealed(data).ifPresentOrElse(
+                    meridian -> PacketDistributor.sendToServer(new OpenMeridianPayload(meridian)),
+                    () -> minecraft.player.displayClientMessage(
+                            Component.translatable("murimcultivation.meridian.network_complete"), true));
         }
 
         while (KeyBindings.BREAKTHROUGH.consumeClick()) {
