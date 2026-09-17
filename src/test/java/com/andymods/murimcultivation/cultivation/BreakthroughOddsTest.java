@@ -33,8 +33,16 @@ class BreakthroughOddsTest {
 
     /** A target realm demanding 50 purity and 5 open meridians, with a 70% base chance. */
     private static Realm target() {
+        return target(0.70D);
+    }
+
+    /**
+     * The same realm with a chosen base chance. Needed because the odds are clamped at 0.95:
+     * a term's full contribution is only observable if the sum stays under the ceiling.
+     */
+    private static Realm target(double baseChance) {
         return new Realm(4, "murimcultivation.realm.peak", "절정",
-                1000.0D, 560.0D, 5.0D, 50.0D, 5, 0.70D, 3, 0x7E57C2, List.of());
+                1000.0D, 560.0D, 5.0D, 50.0D, 5, baseChance, 3, 0x7E57C2, List.of());
     }
 
     private static CultivationData cultivator(double purity, int openMeridians) {
@@ -48,7 +56,11 @@ class BreakthroughOddsTest {
     }
 
     private static double chance(double purity, int openMeridians, double density) {
-        return BreakthroughService.successChance(target(), cultivator(purity, openMeridians), density, TUNING);
+        return chance(target(), purity, openMeridians, density);
+    }
+
+    private static double chance(Realm target, double purity, int openMeridians, double density) {
+        return BreakthroughService.successChance(target, cultivator(purity, openMeridians), density, TUNING);
     }
 
     @Test
@@ -60,14 +72,19 @@ class BreakthroughOddsTest {
 
     @Test
     void refiningPurityBeyondTheFloorImprovesTheOdds() {
-        double scraped = chance(50.0D, 5, 1.0D);
-        double refined = chance(75.0D, 5, 1.0D);
-        double perfect = chance(100.0D, 5, 1.0D);
+        // A low base chance keeps the sum under the 0.95 ceiling, so the purity term's full
+        // contribution is actually observable rather than clamped away.
+        Realm modest = target(0.40D);
+        double scraped = chance(modest, 50.0D, 5, 1.0D);
+        double refined = chance(modest, 75.0D, 5, 1.0D);
+        double perfect = chance(modest, 100.0D, 5, 1.0D);
 
         assertTrue(refined > scraped, "purity above the floor must help");
         assertTrue(perfect > refined, "more purity must keep helping");
-        // At full purity the whole purity weight is earned.
-        assertEquals(0.70D + 0.35D, perfect, 1.0e-9D);
+        // At full purity the whole purity weight is earned: 0.40 + 0.35.
+        assertEquals(0.75D, perfect, 1.0e-9D);
+        // Halfway up the headroom earns half of it.
+        assertEquals(0.40D + 0.175D, refined, 1.0e-9D);
     }
 
     @Test
@@ -94,13 +111,29 @@ class BreakthroughOddsTest {
     }
 
     @Test
-    void theOddsAreClampedAtBothEnds() {
-        // Everything maxed would exceed 1.0 without the ceiling.
+    void theCeilingStopsABreakthroughEverBecomingAFormality() {
+        // Perfect preparation on the default realm sums to 0.70 + 0.35 + 0.20 + 0.30 = 1.55.
         assertEquals(0.95D, chance(100.0D, Meridian.count(), 3.0D), 1.0e-9D,
-                "a breakthrough must never be a formality");
-        // A hopeless attempt still has the floor.
-        assertEquals(0.05D, chance(0.0D, 0, 0.0D), 1.0e-9D,
-                "a desperate attempt must never be truly impossible");
+                "a breakthrough must never be certain, however well prepared");
+    }
+
+    @Test
+    void theFloorStopsADesperateAttemptEverBeingImpossible() {
+        // The floor only bites where the terms actually drive the chance below it, which needs
+        // a realm whose base odds are already long. Beyond Heaven's are 0.10; a barren location
+        // subtracts 0.15, taking the raw value negative.
+        Realm desperate = target(0.10D);
+        assertEquals(0.05D, chance(desperate, 0.0D, 0, 0.0D), 1.0e-9D,
+                "a desperate attempt must never be truly hopeless");
+    }
+
+    @Test
+    void anOrdinaryAttemptSitsWellInsideBothBounds() {
+        // Guards against a tuning change that accidentally pins normal play to a clamp.
+        double ordinary = chance(60.0D, 7, 1.0D);
+        assertTrue(ordinary > TUNING.minChance() && ordinary < TUNING.maxChance(),
+                "a typical prepared attempt should be decided by the formula, not by a clamp: "
+                        + ordinary);
     }
 
     @Test

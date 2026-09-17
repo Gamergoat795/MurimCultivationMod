@@ -22,7 +22,52 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build and test
-        run: ./gradlew build --stacktrace
+        run: ./gradlew build --console=plain --stacktrace
+
+      # Gradle's failure output is a ~150-line internal stack trace that buries the actual
+      # assertion. This pulls the failing test names and messages out of the JUnit XML so the
+      # log says what broke without anyone downloading the HTML report.
+      - name: Summarise test failures
+        if: failure()
+        run: |
+          shopt -s nullglob
+          results=(build/test-results/test/*.xml)
+          if [ ${#results[@]} -eq 0 ]; then
+            echo "No JUnit XML found — the build failed before tests ran (likely a compile error)."
+            exit 0
+          fi
+          python3 - "${results[@]}" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+
+          failures = []
+          for path in sys.argv[1:]:
+              for case in ET.parse(path).getroot().iter('testcase'):
+                  for problem in list(case.findall('failure')) + list(case.findall('error')):
+                      failures.append((
+                          case.get('classname', '?').rsplit('.', 1)[-1],
+                          case.get('name', '?'),
+                          (problem.get('message') or '').strip(),
+                          (problem.text or '').strip().splitlines(),
+                      ))
+
+          if not failures:
+              print("Tests all passed; the build failed for another reason.")
+              sys.exit(0)
+
+          print(f"{len(failures)} failing test(s):\n")
+          for cls, name, message, trace in failures:
+              print(f"  {cls} > {name}")
+              for line in message.splitlines():
+                  print(f"      {line}")
+              # The first frame inside our own package is the assertion that actually fired.
+              for line in trace:
+                  if 'com.andymods.murimcultivation' in line:
+                      frame = line.strip()
+                      # JUnit's trace lines already start with "at".
+                      print(f"      {frame if frame.startswith('at ') else 'at ' + frame}")
+                      break
+              print()
+          PY
 
       - name: Upload jar
         if: success()
@@ -37,5 +82,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: build/reports/tests/
+          path: |
+            build/reports/tests/
+            build/test-results/
           if-no-files-found: ignore
