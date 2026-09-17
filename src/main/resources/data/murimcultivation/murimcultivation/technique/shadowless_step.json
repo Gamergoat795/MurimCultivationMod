@@ -1,0 +1,16 @@
+{
+  "tier": 3,
+  "translation_key": "murimcultivation.technique.shadowless_step",
+  "hangul": "무영보",
+  "behaviour": "murimcultivation:shadowless_step",
+  "qi_cost": 20,
+  "cooldown_ticks": 80,
+  "required_realm_tier": 3,
+  "required_open_meridians": 2,
+  "hand": "any",
+  "mastery_gain_per_use": 1.0,
+  "power": {
+    "range": 7.0,
+    "duration_ticks": 10
+  }
+}

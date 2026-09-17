@@ -1,0 +1,14 @@
+{
+  "tier": 1,
+  "translation_key": "murimcultivation.realm.third_rate",
+  "hangul": "삼류",
+  "progress_per_substage": 40,
+  "qi_capacity": 100,
+  "qi_regen_per_second": 1.0,
+  "purity_floor": 0.0,
+  "required_open_meridians": 0,
+  "breakthrough_base_chance": 1.0,
+  "technique_tier": 1,
+  "aura_color": 10395294,
+  "attributes": []
+}

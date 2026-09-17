@@ -1,0 +1,40 @@
+{
+  "tier": 8,
+  "translation_key": "murimcultivation.realm.life_and_death",
+  "hangul": "생사경",
+  "progress_per_substage": 40000,
+  "qi_capacity": 4500,
+  "qi_regen_per_second": 34.0,
+  "purity_floor": 85.0,
+  "required_open_meridians": 18,
+  "breakthrough_base_chance": 0.2,
+  "technique_tier": 8,
+  "aura_color": 14743546,
+  "attributes": [
+    {
+      "attribute": "minecraft:generic.max_health",
+      "amount": 60,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.attack_damage",
+      "amount": 22,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.movement_speed",
+      "amount": 0.32,
+      "operation": "add_multiplied_total"
+    },
+    {
+      "attribute": "minecraft:generic.armor",
+      "amount": 8,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.knockback_resistance",
+      "amount": 0.15,
+      "operation": "add_value"
+    }
+  ]
+}

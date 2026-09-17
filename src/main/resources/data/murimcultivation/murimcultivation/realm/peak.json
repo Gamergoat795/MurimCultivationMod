@@ -1,0 +1,35 @@
+{
+  "tier": 4,
+  "translation_key": "murimcultivation.realm.peak",
+  "hangul": "절정",
+  "progress_per_substage": 1000,
+  "qi_capacity": 560,
+  "qi_regen_per_second": 5.0,
+  "purity_floor": 50.0,
+  "required_open_meridians": 5,
+  "breakthrough_base_chance": 0.7,
+  "technique_tier": 4,
+  "aura_color": 8280002,
+  "attributes": [
+    {
+      "attribute": "minecraft:generic.max_health",
+      "amount": 12,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.attack_damage",
+      "amount": 4,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.movement_speed",
+      "amount": 0.1,
+      "operation": "add_multiplied_total"
+    },
+    {
+      "attribute": "minecraft:generic.armor",
+      "amount": 1,
+      "operation": "add_value"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "translation_key": "murimcultivation.title.no_longer_nameless",
+  "hangul": "이류",
+  "color": 10868391,
+  "attributes": [
+    {
+      "attribute": "minecraft:generic.max_health",
+      "amount": 2.0,
+      "operation": "add_value"
+    }
+  ]
+}

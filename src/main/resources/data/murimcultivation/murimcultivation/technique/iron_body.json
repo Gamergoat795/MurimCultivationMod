@@ -1,0 +1,17 @@
+{
+  "tier": 4,
+  "translation_key": "murimcultivation.technique.iron_body",
+  "hangul": "철신공",
+  "behaviour": "murimcultivation:iron_body",
+  "qi_cost": 40,
+  "cooldown_ticks": 300,
+  "required_realm_tier": 4,
+  "required_open_meridians": 5,
+  "hand": "any",
+  "mastery_gain_per_use": 0.8,
+  "power": {
+    "duration_ticks": 200,
+    "amplifier": 1,
+    "qi_per_tick": 0.5
+  }
+}

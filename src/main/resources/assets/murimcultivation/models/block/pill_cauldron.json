@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/cauldron",
+  "textures": {
+    "top": "murimcultivation:block/pill_cauldron_top",
+    "side": "murimcultivation:block/pill_cauldron_side",
+    "bottom": "murimcultivation:block/pill_cauldron_bottom",
+    "inside": "murimcultivation:block/pill_cauldron_inside",
+    "particle": "murimcultivation:block/pill_cauldron_side"
+  }
+}

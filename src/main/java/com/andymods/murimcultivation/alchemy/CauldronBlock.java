@@ -1,0 +1,170 @@
+package com.andymods.murimcultivation.alchemy;
+
+import com.andymods.murimcultivation.registry.ModBlockEntities;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Containers;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * The pill cauldron. Right-click with a herb to start it; right-click empty-handed to collect.
+ *
+ * <p>Deliberately no screen. Two interactions prove the whole brewing loop, and a UI built now
+ * would be redesigned by the milestone that gives alchemy its real depth.
+ */
+public class CauldronBlock extends BaseEntityBlock {
+
+    public static final MapCodec<CauldronBlock> CODEC = simpleCodec(CauldronBlock::new);
+
+    private static final VoxelShape SHAPE = Block.box(1.0D, 0.0D, 1.0D, 15.0D, 12.0D, 15.0D);
+
+    public CauldronBlock(Properties properties) {
+        super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    /** BaseEntityBlock renders nothing by default, which would make the cauldron invisible. */
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level,
+                                  BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new CauldronBlockEntity(pos, state);
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
+                                                                 BlockEntityType<T> type) {
+        // Server-side only: brewing is authoritative state, and the client is told the result.
+        return level.isClientSide() ? null
+                : createTickerHelper(type, ModBlockEntities.CAULDRON.get(),
+                        CauldronBlockEntity::serverTick);
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                             Player player, InteractionHand hand, BlockHitResult hit) {
+        if (level.isClientSide()) {
+            return ItemInteractionResult.sidedSuccess(true);
+        }
+        if (!(level.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron)) {
+            // Not PASS — ItemInteractionResult has no such constant, and this is the better
+            // behaviour anyway: fall through to useWithoutItem rather than swallowing the click.
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+
+        if (cauldron.hasOutput()) {
+            return collect(cauldron, player, level, pos);
+        }
+        if (cauldron.isBrewing()) {
+            player.displayClientMessage(Component.translatable("murimcultivation.cauldron.brewing",
+                    (int) Math.round(cauldron.progress() * 100.0D)), true);
+            return ItemInteractionResult.CONSUME;
+        }
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return ItemInteractionResult.CONSUME;
+        }
+
+        // Read the cost before anything shrinks the stack: on a stack of one, shrinking empties it
+        // and the lookup would then find no formula and report a cost of zero.
+        double cost = cauldron.purityCostOf(stack);
+
+        switch (cauldron.tryInsert(stack, serverPlayer)) {
+            case ACCEPTED -> {
+                stack.shrink(1);
+                player.displayClientMessage(cost > 0.0D
+                        ? Component.translatable("murimcultivation.cauldron.started_costing",
+                                String.format("%.1f", cost))
+                        : Component.translatable("murimcultivation.cauldron.started"), true);
+            }
+            case NOT_ENOUGH_PURITY -> player.displayClientMessage(
+                    Component.translatable("murimcultivation.cauldron.impure",
+                            String.format("%.1f", cost)), true);
+            // BUSY cannot be reached — the brewing and output cases above return first — but the
+            // switch is exhaustive so that adding a state to the enum is a compile error here.
+            case BUSY -> player.displayClientMessage(
+                    Component.translatable("murimcultivation.cauldron.brewing",
+                            (int) Math.round(cauldron.progress() * 100.0D)), true);
+            case NO_FORMULA -> player.displayClientMessage(
+                    Component.translatable("murimcultivation.cauldron.no_formula"), true);
+        }
+        return ItemInteractionResult.CONSUME;
+    }
+
+    /** Empty-handed use: collect a finished pill. */
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+                                                                  Player player, BlockHitResult hit) {
+        if (level.isClientSide()) {
+            return InteractionResult.sidedSuccess(true);
+        }
+        if (!(level.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron)) {
+            return InteractionResult.PASS;
+        }
+
+        if (cauldron.hasOutput()) {
+            collect(cauldron, player, level, pos);
+            return InteractionResult.CONSUME;
+        }
+        player.displayClientMessage(cauldron.isBrewing()
+                        ? Component.translatable("murimcultivation.cauldron.brewing",
+                        (int) Math.round(cauldron.progress() * 100.0D))
+                        : Component.translatable("murimcultivation.cauldron.empty"), true);
+        return InteractionResult.CONSUME;
+    }
+
+    private ItemInteractionResult collect(CauldronBlockEntity cauldron, Player player, Level level, BlockPos pos) {
+        ItemStack pill = cauldron.takeOutput();
+        if (!player.getInventory().add(pill)) {
+            player.drop(pill, false);
+        }
+        player.displayClientMessage(Component.translatable("murimcultivation.cauldron.collected",
+                pill.getHoverName()), true);
+        return ItemInteractionResult.SUCCESS;
+    }
+
+    /** Breaking the cauldron returns whatever was inside rather than eating it. */
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moving) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof CauldronBlockEntity cauldron) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(),
+                    cauldron.input());
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(),
+                    cauldron.takeOutput());
+        }
+        super.onRemove(state, level, pos, newState, moving);
+    }
+}

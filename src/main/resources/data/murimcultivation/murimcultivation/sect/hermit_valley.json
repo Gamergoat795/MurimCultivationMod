@@ -1,0 +1,15 @@
+{
+  "translation_key": "murimcultivation.sect.hermit_valley",
+  "hangul": "은둔곡",
+  "alignment": "neutral",
+  "color": 10868391,
+  "required_realm_tier": 1,
+  "teachings": {
+    "outer_disciple": [
+      "murimcultivation:internal_healing"
+    ],
+    "inner_disciple": [
+      "murimcultivation:water_walking"
+    ]
+  }
+}

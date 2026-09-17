@@ -1,0 +1,40 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+out/
+
+# ModDevGradle / NeoForge generated
+run/
+runs/
+run-data/
+repo/
+.neoforge/
+
+# Datagen output is committed (it ships in the jar), but caches are not
+src/generated/resources/.cache/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.eclipse/
+.settings/
+.classpath
+.project
+bin/
+.apt_generated/
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / crash reports
+*.log
+crash-reports/
+
+# CI build log, teed so the workflow can summarise compiler diagnostics
+build-output.txt

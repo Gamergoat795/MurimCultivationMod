@@ -1,0 +1,22 @@
+{
+  "category": "daily",
+  "translation_key": "murimcultivation.quest.daily_breathing",
+  "description_key": "murimcultivation.quest.daily_breathing.description",
+  "required_realm_tier": 1,
+  "objectives": [
+    {
+      "kind": "meditate_seconds",
+      "amount": 180
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 60
+    },
+    {
+      "kind": "purity",
+      "amount": 1
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "tier": 2,
+  "translation_key": "murimcultivation.realm.second_rate",
+  "hangul": "이류",
+  "progress_per_substage": 150,
+  "qi_capacity": 180,
+  "qi_regen_per_second": 1.8,
+  "purity_floor": 20.0,
+  "required_open_meridians": 0,
+  "breakthrough_base_chance": 0.95,
+  "technique_tier": 2,
+  "aura_color": 10868391,
+  "attributes": [
+    {
+      "attribute": "minecraft:generic.max_health",
+      "amount": 2,
+      "operation": "add_value"
+    },
+    {
+      "attribute": "minecraft:generic.attack_damage",
+      "amount": 1,
+      "operation": "add_value"
+    }
+  ]
+}

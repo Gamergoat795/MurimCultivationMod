@@ -1,0 +1,18 @@
+{
+  "category": "daily",
+  "translation_key": "murimcultivation.quest.daily_sparring",
+  "description_key": "murimcultivation.quest.daily_sparring.description",
+  "required_realm_tier": 1,
+  "objectives": [
+    {
+      "kind": "kill_entities",
+      "amount": 10
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 50
+    }
+  ]
+}

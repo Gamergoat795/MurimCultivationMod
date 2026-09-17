@@ -1,0 +1,22 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.first_breath",
+  "description_key": "murimcultivation.quest.first_breath.description",
+  "required_realm_tier": 1,
+  "objectives": [
+    {
+      "kind": "meditate_seconds",
+      "amount": 60
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 40
+    },
+    {
+      "kind": "stat_points",
+      "amount": 1
+    }
+  ]
+}

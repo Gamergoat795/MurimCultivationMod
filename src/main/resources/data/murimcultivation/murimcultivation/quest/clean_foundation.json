@@ -1,0 +1,29 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.clean_foundation",
+  "description_key": "murimcultivation.quest.clean_foundation.description",
+  "required_realm_tier": 1,
+  "prerequisites": [
+    "murimcultivation:first_breath"
+  ],
+  "objectives": [
+    {
+      "kind": "reach_purity",
+      "amount": 60
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 80
+    },
+    {
+      "kind": "purity",
+      "amount": 2
+    },
+    {
+      "kind": "stat_points",
+      "amount": 1
+    }
+  ]
+}
