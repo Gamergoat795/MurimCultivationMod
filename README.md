@@ -135,9 +135,13 @@ rewards.
 | `X` | Attempt breakthrough |
 | `M` | Open the next sealed meridian |
 | `K` | Open the System window |
-| `R` | Use technique slot 1 |
+| `G` | Use technique slot 1 |
 | unbound | Technique slots 2–4 — assign them yourself |
 | `C` | Cycle the selected technique slot |
+
+Slot 1 sits on `G` rather than the more natural `R` because Essential (essential.gg) puts its
+emote wheel there, and Minecraft fires both mappings on a shared key — you would emote and cast at
+once. Rebind it to `R` in the controls screen if you do not run Essential.
 
 ## Extending it with a datapack
 
@@ -186,7 +190,7 @@ cultivation/  Qi, realms, meridians, breakthrough, Qi Deviation
 technique/    martial arts: definitions, mastery, loadout, effects
 system/       the System window's data: quests, titles, stat points
 network/      CustomPacketPayload records, client handling isolated to Dist.CLIENT
-client/       HUD layers, the System screen, aura rendering, keybinds
+client/       HUD layers, the System screen, the NPC renderer, keybinds
 registry/     every DeferredRegister and the datapack registry keys
 sect/ npc/ alchemy/ world/   skeletons for a later milestone
 ```

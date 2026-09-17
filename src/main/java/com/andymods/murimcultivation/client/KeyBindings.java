@@ -38,12 +38,18 @@ public final class KeyBindings {
             CATEGORY);
 
     /**
-     * One key per loadout slot. Slot 1 defaults to R; slots 2-4 ship unbound so a player
-     * assigns them to keys that do not already mean something in their setup. An unbound
-     * mapping is still registered and still appears in the controls screen.
+     * One key per loadout slot. Slots 2-4 ship unbound so a player assigns them to keys that do
+     * not already mean something in their setup. An unbound mapping is still registered and still
+     * appears in the controls screen.
+     *
+     * <p>Slot 1 defaults to G rather than the more ergonomic R because Essential (essential.gg)
+     * puts its emote wheel on R. Minecraft lets both mappings fire on a shared key, so the
+     * collision is not cosmetic: you would emote and cast at the same time. V was the other
+     * candidate and is worse — Simple Voice Chat has it. Anyone who does not run either mod can
+     * rebind to R in the controls screen.
      */
     public static final KeyMapping[] TECHNIQUE_SLOTS = {
-            techniqueSlot(1, GLFW.GLFW_KEY_R),
+            techniqueSlot(1, GLFW.GLFW_KEY_G),
             techniqueSlot(2, InputConstants.UNKNOWN.getValue()),
             techniqueSlot(3, InputConstants.UNKNOWN.getValue()),
             techniqueSlot(4, InputConstants.UNKNOWN.getValue()),

@@ -1,6 +1,6 @@
 {
-    "parent": "minecraft:item/generated",
-    "textures": {
-        "layer0": "murimcultivation:item/qi_gathering_manual"
-    }
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "murimcultivation:item/qi_gathering_manual"
+  }
 }

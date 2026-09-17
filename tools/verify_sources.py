@@ -20,7 +20,8 @@ import sys
 
 MODID = "murimcultivation"
 JAVA_ROOTS = ("src/main/java/", "src/test/java/")
-LANG_FILE = f"src/main/resources/assets/{MODID}/lang/en_us.json"
+ASSETS = f"src/main/resources/assets/{MODID}"
+LANG_FILE = f"{ASSETS}/lang/en_us.json"
 DATA_DIR = f"src/main/resources/data/{MODID}/{MODID}"
 INTERNAL_PACKAGE = "com.andymods.murimcultivation."
 
@@ -335,11 +336,53 @@ def check_quest_consistency(realms: list, techniques: dict) -> None:
              "cultivator would open the System window to an empty list")
 
 
+def check_textures() -> list[str]:
+    """
+    Cross-checks every texture a model references against the files on disk.
+
+    A missing texture is reported but does **not** fail the build. The art is deliberately
+    unfinished — models point at `murimcultivation:` paths so that dropping a PNG in makes it work
+    with no further edits, which means the missing ones are a to-do list rather than a defect. A
+    hard failure here would just mean nobody could commit until every sprite was drawn.
+
+    It still catches the case that matters: a typo in a texture path shows up as an extra entry in
+    a list you are watching shrink.
+    """
+    referenced: dict[str, set[str]] = {}
+    for root, _, files in os.walk(os.path.join(ASSETS, "models")):
+        for name in sorted(files):
+            if not name.endswith(".json"):
+                continue
+            path = os.path.join(root, name)
+            model = json.load(open(path, encoding="utf-8"))
+            for key, value in (model.get("textures") or {}).items():
+                if isinstance(value, str) and value.startswith(f"{MODID}:"):
+                    referenced.setdefault(value[len(MODID) + 1:], set()).add(
+                        os.path.relpath(path, ASSETS))
+
+    missing = []
+    for texture, models in sorted(referenced.items()):
+        if not os.path.isfile(os.path.join(ASSETS, "textures", f"{texture}.png")):
+            missing.append(f"textures/{texture}.png  (wanted by {', '.join(sorted(models))})")
+
+    # The reverse: a PNG nothing points at is either dead weight or a filename typo.
+    for root, _, files in os.walk(os.path.join(ASSETS, "textures")):
+        for name in sorted(files):
+            if not name.endswith(".png"):
+                continue
+            rel = os.path.relpath(os.path.join(root, name), os.path.join(ASSETS, "textures"))
+            if rel[:-len(".png")].replace(os.sep, "/") not in referenced:
+                fail(f"assets/textures/{rel}: no model references this texture")
+
+    return missing
+
+
 def main() -> int:
     check_structure()
     check_json_parses()
     check_translation_keys()
     check_datapack_consistency()
+    missing_art = check_textures()
 
     java_count = len(java_files())
     if failures:
@@ -350,6 +393,12 @@ def main() -> int:
 
     print(f"verify_sources: OK — {java_count} Java files, structure, JSON, "
           f"translation keys and datapack consistency all clean")
+
+    if missing_art:
+        print(f"\nart to draw — {len(missing_art)} texture(s) not yet on disk:")
+        for entry in missing_art:
+            print(f"  {entry}")
+        print("\n  These render as the missing-texture checkerboard until drawn. See docs/ART.md.")
     return 0
 
 

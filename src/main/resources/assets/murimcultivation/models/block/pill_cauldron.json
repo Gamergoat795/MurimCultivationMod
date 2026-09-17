@@ -1,10 +1,10 @@
 {
   "parent": "minecraft:block/cauldron",
   "textures": {
-    "top": "minecraft:block/copper_block",
-    "side": "minecraft:block/copper_block",
-    "bottom": "minecraft:block/copper_block",
-    "inside": "minecraft:block/copper_block",
-    "particle": "minecraft:block/copper_block"
+    "top": "murimcultivation:block/pill_cauldron_top",
+    "side": "murimcultivation:block/pill_cauldron_side",
+    "bottom": "murimcultivation:block/pill_cauldron_bottom",
+    "inside": "murimcultivation:block/pill_cauldron_inside",
+    "particle": "murimcultivation:block/pill_cauldron_side"
   }
 }
