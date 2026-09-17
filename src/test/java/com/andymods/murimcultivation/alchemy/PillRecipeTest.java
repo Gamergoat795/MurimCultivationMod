@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.alchemy;
 
 import com.andymods.murimcultivation.cultivation.CultivationData;
+import com.andymods.murimcultivation.item.PillItem;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
@@ -110,11 +111,11 @@ class PillRecipeTest {
 
     @Test
     void theFoundationPillCannotBeFarmedForPurity() {
-        // It grants +5 purity (PillItem.Effect.PURITY, set in ModItems). If brewing it cost less
-        // than that, a loop of brew-and-swallow would climb to full purity for nothing but time,
-        // and the purity floor on breakthrough would stop meaning anything.
-        double granted = 5.0D;
-        assertTrue(loadRecipes().get("foundation_pill").purityCost() > granted,
+        // If brewing it cost less than it grants, a loop of brew-and-swallow would climb to full
+        // purity for nothing but time, and the purity floor on breakthrough would stop meaning
+        // anything. Read from the constant the item registration uses, not a copy of the number.
+        assertTrue(loadRecipes().get("foundation_pill").purityCost()
+                        > PillItem.FOUNDATION_PURITY_GRANT,
                 "brewing a foundation pill must cost more purity than swallowing it returns");
     }
 

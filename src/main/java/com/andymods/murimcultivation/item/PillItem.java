@@ -76,6 +76,16 @@ public class PillItem extends Item {
         }
     }
 
+    /**
+     * How much purity a Foundation Pill returns.
+     *
+     * <p>Lives here rather than inline at its registration because the brewing cost in
+     * {@code pill_recipe/foundation_pill.json} has to stay above it — below it and brew-and-swallow
+     * becomes a free climb to full purity. A test pins that relationship, and it can only pin it
+     * against a number it shares.
+     */
+    public static final double FOUNDATION_PURITY_GRANT = 5.0D;
+
     private final Effect effect;
     private final double amount;
 

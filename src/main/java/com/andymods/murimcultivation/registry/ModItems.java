@@ -64,7 +64,8 @@ public final class ModItems {
 
     public static final DeferredHolder<Item, PillItem> FOUNDATION_PILL =
             ITEMS.register("foundation_pill", () -> new PillItem(
-                    new Item.Properties().stacksTo(16), PillItem.Effect.PURITY, 5.0D));
+                    new Item.Properties().stacksTo(16), PillItem.Effect.PURITY,
+                    PillItem.FOUNDATION_PURITY_GRANT));
 
     /** A spawn egg, since these belong in compounds a later milestone will generate. */
     public static final DeferredHolder<Item, Item> MARTIAL_ARTIST_SPAWN_EGG =
