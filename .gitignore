@@ -35,3 +35,6 @@ Thumbs.db
 # Logs / crash reports
 *.log
 crash-reports/
+
+# CI build log, teed so the workflow can summarise compiler diagnostics
+build-output.txt

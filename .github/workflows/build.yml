@@ -27,12 +27,61 @@ jobs:
       - name: Verify sources
         run: python3 tools/verify_sources.py
 
+      # Output is teed so the two summariser steps below can read it. --stacktrace is gone
+      # deliberately: its ~150 lines of Gradle internals never once pointed at a real cause,
+      # and they push the compiler's own diagnostics out of reach of a log tail.
       - name: Build and test
-        run: ./gradlew build --console=plain --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew build --console=plain 2>&1 | tee build-output.txt
 
-      # Gradle's failure output is a ~150-line internal stack trace that buries the actual
-      # assertion. This pulls the failing test names and messages out of the JUnit XML so the
-      # log says what broke without anyone downloading the HTML report.
+      # A compile error is the failure mode with the worst signal-to-noise: javac's one useful
+      # line sits hundreds of lines up the log. This reprints just the diagnostics, with the
+      # offending source line and the caret, so the log ends with what actually broke.
+      - name: Summarise compile errors
+        if: failure()
+        run: |
+          if [ ! -f build-output.txt ]; then
+            echo "No build output captured."
+            exit 0
+          fi
+          python3 - <<'PY'
+          import re, sys
+
+          # javac: "/path/Foo.java:42: error: cannot find symbol". Gradle may prefix the line.
+          pattern = re.compile(r'(\S+\.java):(\d+):\s*(error|warning):\s*(.*)')
+          lines = open('build-output.txt', errors='replace').read().splitlines()
+
+          found = []
+          for i, line in enumerate(lines):
+              match = pattern.search(line)
+              if match and match.group(3) == 'error':
+                  # javac follows each diagnostic with the source line and a caret.
+                  detail = [l for l in lines[i + 1:i + 3] if l.strip() and not pattern.search(l)]
+                  found.append((match.group(1), match.group(2), match.group(4), detail))
+
+          if not found:
+              print("No javac diagnostics in the build output; the failure is elsewhere.")
+              print("Last 30 lines:\n")
+              for line in lines[-30:]:
+                  print(f"  {line}")
+              sys.exit(0)
+
+          print(f"{len(found)} compile error(s):\n")
+          for path, line_no, message, detail in found:
+              # Trim the runner's absolute prefix so paths match what you have checked out.
+              short = path.split('/src/', 1)
+              short = 'src/' + short[1] if len(short) == 2 else path
+              print(f"  {short}:{line_no}")
+              print(f"      {message}")
+              for extra in detail:
+                  print(f"      {extra.rstrip()}")
+              print()
+          PY
+
+      # Gradle's failure output buries the actual assertion. This pulls the failing test names
+      # and messages out of the JUnit XML so the log says what broke without anyone downloading
+      # the HTML report.
       - name: Summarise test failures
         if: failure()
         run: |
