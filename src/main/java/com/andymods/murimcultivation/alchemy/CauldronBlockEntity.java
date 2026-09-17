@@ -1,6 +1,8 @@
 package com.andymods.murimcultivation.alchemy;
 
 import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.cultivation.CultivationData;
+import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -10,6 +12,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
@@ -67,18 +70,40 @@ public class CauldronBlockEntity extends BlockEntity {
         }
     }
 
+    /** Why a herb was or was not accepted. Every case has something to say to the player. */
+    public enum Insertion {
+        ACCEPTED,
+        BUSY,
+        NO_FORMULA,
+        NOT_ENOUGH_PURITY,
+    }
+
     /**
-     * Puts a herb in, if the cauldron is idle and a formula exists for it.
+     * Puts a herb in, if the cauldron is idle, a formula exists for it, and the brewer can pay
+     * the formula's purity cost.
      *
-     * @return whether the herb was accepted
+     * <p>Purity is charged here rather than on collection, so abandoning a brew does not refund
+     * it. Committing the herb is the decision; walking away is not a way out of it.
      */
-    public boolean tryInsert(ItemStack stack) {
+    public Insertion tryInsert(ItemStack stack, ServerPlayer brewer) {
         if (!input.isEmpty() || !output.isEmpty() || level == null) {
-            return false;
+            return Insertion.BUSY;
         }
         Optional<PillRecipe> recipe = recipeFor(stack);
         if (recipe.isEmpty()) {
-            return false;
+            return Insertion.NO_FORMULA;
+        }
+
+        double cost = recipe.get().purityCost();
+        CultivationData data = CultivationService.data(brewer);
+        // The floor is what keeps refining a real cost: you cannot brew your foundation away to
+        // nothing, so a run of pills eventually requires meditating the purity back first.
+        if (cost > 0.0D && data.purity() - cost < CultivationData.MIN_PURITY) {
+            return Insertion.NOT_ENOUGH_PURITY;
+        }
+        if (cost > 0.0D) {
+            data.addPurity(-cost);
+            CultivationService.syncValuesToClient(brewer);
         }
 
         input = stack.copyWithCount(1);
@@ -86,7 +111,12 @@ public class CauldronBlockEntity extends BlockEntity {
         brewTotal = recipe.get().brewTicks();
         setChanged();
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
-        return true;
+        return Insertion.ACCEPTED;
+    }
+
+    /** The purity a herb would cost to brew, for a message before anything is spent. */
+    public double purityCostOf(ItemStack stack) {
+        return recipeFor(stack).map(PillRecipe::purityCost).orElse(0.0D);
     }
 
     /** Takes the finished pill, leaving the cauldron idle. */

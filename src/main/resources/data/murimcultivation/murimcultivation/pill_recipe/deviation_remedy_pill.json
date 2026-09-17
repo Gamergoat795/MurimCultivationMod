@@ -2,5 +2,6 @@
   "herb": "murimcultivation:blood_lotus",
   "result": "murimcultivation:deviation_remedy_pill",
   "result_count": 1,
-  "brew_ticks": 400
+  "brew_ticks": 400,
+  "purity_cost": 4.0
 }

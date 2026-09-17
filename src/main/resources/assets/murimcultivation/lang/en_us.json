@@ -264,6 +264,8 @@
   "item.murimcultivation.deviation_remedy_pill": "Deviation Remedy Pill",
   "item.murimcultivation.foundation_pill": "Foundation Pill",
   "murimcultivation.cauldron.started": "The cauldron begins to simmer.",
+  "murimcultivation.cauldron.started_costing": "The cauldron begins to simmer. [Purity -%s]",
+  "murimcultivation.cauldron.impure": "[Insufficient purity: %s required]",
   "murimcultivation.cauldron.brewing": "Brewing… %s%%",
   "murimcultivation.cauldron.collected": "You take the %s.",
   "murimcultivation.cauldron.empty": "The cauldron is cold. Add a herb.",

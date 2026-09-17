@@ -2,5 +2,6 @@
   "herb": "murimcultivation:spirit_ginseng",
   "result": "murimcultivation:qi_recovery_pill",
   "result_count": 2,
-  "brew_ticks": 200
+  "brew_ticks": 200,
+  "purity_cost": 1.0
 }

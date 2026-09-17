@@ -4,6 +4,7 @@ import com.andymods.murimcultivation.registry.ModBlockEntities;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -93,13 +94,33 @@ public class CauldronBlock extends BaseEntityBlock {
                     (int) Math.round(cauldron.progress() * 100.0D)), true);
             return ItemInteractionResult.CONSUME;
         }
-        if (cauldron.tryInsert(stack)) {
-            stack.shrink(1);
-            player.displayClientMessage(Component.translatable("murimcultivation.cauldron.started"), true);
+        if (!(player instanceof ServerPlayer serverPlayer)) {
             return ItemInteractionResult.CONSUME;
         }
 
-        player.displayClientMessage(Component.translatable("murimcultivation.cauldron.no_formula"), true);
+        // Read the cost before anything shrinks the stack: on a stack of one, shrinking empties it
+        // and the lookup would then find no formula and report a cost of zero.
+        double cost = cauldron.purityCostOf(stack);
+
+        switch (cauldron.tryInsert(stack, serverPlayer)) {
+            case ACCEPTED -> {
+                stack.shrink(1);
+                player.displayClientMessage(cost > 0.0D
+                        ? Component.translatable("murimcultivation.cauldron.started_costing",
+                                String.format("%.1f", cost))
+                        : Component.translatable("murimcultivation.cauldron.started"), true);
+            }
+            case NOT_ENOUGH_PURITY -> player.displayClientMessage(
+                    Component.translatable("murimcultivation.cauldron.impure",
+                            String.format("%.1f", cost)), true);
+            // BUSY cannot be reached — the brewing and output cases above return first — but the
+            // switch is exhaustive so that adding a state to the enum is a compile error here.
+            case BUSY -> player.displayClientMessage(
+                    Component.translatable("murimcultivation.cauldron.brewing",
+                            (int) Math.round(cauldron.progress() * 100.0D)), true);
+            case NO_FORMULA -> player.displayClientMessage(
+                    Component.translatable("murimcultivation.cauldron.no_formula"), true);
+        }
         return ItemInteractionResult.CONSUME;
     }
 
