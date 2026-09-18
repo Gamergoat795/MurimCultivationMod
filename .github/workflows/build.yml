@@ -60,6 +60,15 @@ jobs:
                   detail = [l for l in lines[i + 1:i + 3] if l.strip() and not pattern.search(l)]
                   found.append((match.group(1), match.group(2), match.group(4), detail))
 
+          # Gradle prints each diagnostic twice: once as the compiler emits it, and again inside
+          # the "What went wrong" block. Reporting "4 compile error(s)" for two real ones misleads
+          # about how much is broken, so collapse by file, line and message.
+          unique = {}
+          for path, line_no, message, detail in found:
+              unique.setdefault((path, line_no, message), detail)
+          found = [(path, line_no, message, detail)
+                   for (path, line_no, message), detail in unique.items()]
+
           if not found:
               print("No javac diagnostics in the build output; the failure is elsewhere.")
               print("Last 30 lines:\n")
