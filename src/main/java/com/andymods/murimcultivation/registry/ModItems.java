@@ -72,6 +72,14 @@ public final class ModItems {
             ITEMS.register("martial_artist_spawn_egg", () -> new DeferredSpawnEggItem(
                     ModEntities.MARTIAL_ARTIST, 0x3B4252, 0xB48EAD, new Item.Properties()));
 
+    /**
+     * A wandering warrior, for testing without waiting on a natural spawn — and the only way to
+     * meet one at all on a server that has turned natural spawning off.
+     */
+    public static final DeferredHolder<Item, Item> WANDERING_WARRIOR_SPAWN_EGG =
+            ITEMS.register("wandering_warrior_spawn_egg", () -> new DeferredSpawnEggItem(
+                    ModEntities.WANDERING_WARRIOR, 0x4C566A, 0xD08770, new Item.Properties()));
+
     public static void register(IEventBus modBus) {
         ITEMS.register(modBus);
     }

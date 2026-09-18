@@ -88,6 +88,13 @@ public final class MurimConfig {
         private final ModConfigSpec.IntValue standingOrthodoxHonourRequired;
         private final ModConfigSpec.IntValue standingOrthodoxInfamyLimit;
         private final ModConfigSpec.IntValue standingDemonicInfamyRequired;
+        private final ModConfigSpec.BooleanValue warriorNaturalSpawns;
+        private final ModConfigSpec.IntValue warriorQiRichPressure;
+        private final ModConfigSpec.IntValue warriorNeutralPressure;
+        private final ModConfigSpec.IntValue warriorQiBarrenPressure;
+        private final ModConfigSpec.IntValue warriorPressurePerHundredBlocks;
+        private final ModConfigSpec.IntValue warriorMaxDistancePressure;
+        private final ModConfigSpec.IntValue warriorMaxNaturalRealmTier;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -465,6 +472,57 @@ public final class MurimConfig {
                     .defineInRange("demonicInfamyRequired", 20, 0, 100);
 
             builder.pop();
+            builder.comment("Wandering warriors: who you meet on the road, and how hard they are.",
+                            "A warrior's realm is rolled once when it spawns and never scales to",
+                            "you, which is what gives the world geography — somewhere is safe and",
+                            "somewhere is not. 'Pressure' is that danger, 0 to 100: the biome sets a",
+                            "floor and remoteness from world spawn raises it. At pressure 0 roughly",
+                            "three in five are Thugs and one in a hundred is a Master; at 100 it is",
+                            "one in ten and one in five.")
+                    .push("warriors");
+
+            warriorNaturalSpawns = builder
+                    .comment("Whether wandering warriors spawn on their own. Turn this off to keep",
+                            "them entirely out of worldgen; the spawn egg still works, so they stay",
+                            "available for a sect compound or an adventure map placed by hand.",
+                            "How often they spawn is a datapack value rather than a config one --",
+                            "edit the weight in data/murimcultivation/neoforge/biome_modifier/",
+                            "wandering_warriors.json, because a biome modifier cannot read config.")
+                    .define("naturalSpawns", true);
+
+            warriorQiRichPressure = builder
+                    .comment("Pressure floor in a biome tagged #murimcultivation:qi_rich. Higher than",
+                            "neutral because warriors train where the Qi is good, so the bamboo",
+                            "groves and the deep dark hold the dangerous ones.")
+                    .defineInRange("qiRichPressure", 35, 0, 100);
+
+            warriorNeutralPressure = builder
+                    .comment("Pressure floor in an ordinary biome.")
+                    .defineInRange("neutralPressure", 20, 0, 100);
+
+            warriorQiBarrenPressure = builder
+                    .comment("Pressure floor in a barren biome, where only thugs bother.")
+                    .defineInRange("qiBarrenPressure", 5, 0, 100);
+
+            warriorPressurePerHundredBlocks = builder
+                    .comment("Pressure added per hundred blocks from world spawn. At the default it",
+                            "takes 4500 blocks to add the full distance allowance.")
+                    .defineInRange("pressurePerHundredBlocks", 1, 0, 100);
+
+            warriorMaxDistancePressure = builder
+                    .comment("The most that distance alone may contribute, so the curve has a far",
+                            "edge rather than climbing without limit into the far lands.")
+                    .defineInRange("maxDistancePressure", 45, 0, 100);
+
+            warriorMaxNaturalRealmTier = builder
+                    .comment("The highest realm tier a wild spawn may roll. 5 is Transcendent.",
+                            "The shipped ladder runs to tier 9, whose grants are +80 health and +30",
+                            "attack damage: a fine thing to be at the end of a long climb and an",
+                            "absurd thing to meet while walking. Capping here leaves the top realms",
+                            "as something only a deliberately placed encounter can be.")
+                    .defineInRange("maxNaturalRealmTier", 5, 1, 100);
+
+            builder.pop();
             builder.comment("Performance and presentation").push("general");
 
             cultivationTickInterval = builder
@@ -747,6 +805,34 @@ public final class MurimConfig {
 
     public static int standingDemonicInfamyRequired() {
         return VALUES.standingDemonicInfamyRequired.get();
+    }
+
+    public static boolean warriorNaturalSpawns() {
+        return VALUES.warriorNaturalSpawns.get();
+    }
+
+    public static int warriorQiRichPressure() {
+        return VALUES.warriorQiRichPressure.get();
+    }
+
+    public static int warriorNeutralPressure() {
+        return VALUES.warriorNeutralPressure.get();
+    }
+
+    public static int warriorQiBarrenPressure() {
+        return VALUES.warriorQiBarrenPressure.get();
+    }
+
+    public static int warriorPressurePerHundredBlocks() {
+        return VALUES.warriorPressurePerHundredBlocks.get();
+    }
+
+    public static int warriorMaxDistancePressure() {
+        return VALUES.warriorMaxDistancePressure.get();
+    }
+
+    public static int warriorMaxNaturalRealmTier() {
+        return VALUES.warriorMaxNaturalRealmTier.get();
     }
 
     public static int cultivationTickInterval() {

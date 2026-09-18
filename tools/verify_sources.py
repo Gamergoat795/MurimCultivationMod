@@ -150,6 +150,7 @@ def check_translation_keys() -> None:
         f"{MODID}.sect_rank.": enum_ids("src/main/java/com/andymods/murimcultivation/sect/SectRank.java"),
         f"{MODID}.sect_alignment.": enum_ids(
             "src/main/java/com/andymods/murimcultivation/sect/SectAlignment.java"),
+        f"{MODID}.warrior_tier.": enum_ids("src/main/java/com/andymods/murimcultivation/npc/WarriorTier.java"),
         f"{MODID}.npc.": ["prefix", "no_sect", "not_a_member", "nothing_left",
                           "rise_further", "unknown_art", "taught"],
         f"{MODID}.pill.": [f"{effect}.{suffix}"

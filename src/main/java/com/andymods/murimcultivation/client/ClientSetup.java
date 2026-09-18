@@ -6,6 +6,7 @@ import com.andymods.murimcultivation.client.hud.FocusPromptLayer;
 import com.andymods.murimcultivation.client.hud.SystemToastLayer;
 import com.andymods.murimcultivation.client.hud.TechniqueBarLayer;
 import com.andymods.murimcultivation.client.render.MartialArtistRenderer;
+import com.andymods.murimcultivation.client.render.WanderingWarriorRenderer;
 import com.andymods.murimcultivation.registry.ModEntities;
 import net.minecraft.client.KeyMapping;
 import net.neoforged.api.distmarker.Dist;
@@ -43,6 +44,7 @@ public final class ClientSetup {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         // An entity type registered without a renderer crashes the moment one is spawned.
         event.registerEntityRenderer(ModEntities.MARTIAL_ARTIST.get(), MartialArtistRenderer::new);
+        event.registerEntityRenderer(ModEntities.WANDERING_WARRIOR.get(), WanderingWarriorRenderer::new);
     }
 
     private ClientSetup() {

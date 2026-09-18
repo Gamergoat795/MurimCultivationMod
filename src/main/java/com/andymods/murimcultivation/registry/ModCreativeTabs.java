@@ -33,6 +33,7 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.DEVIATION_REMEDY_PILL.get());
                         output.accept(ModItems.FOUNDATION_PILL.get());
                         output.accept(ModItems.MARTIAL_ARTIST_SPAWN_EGG.get());
+                        output.accept(ModItems.WANDERING_WARRIOR_SPAWN_EGG.get());
                         // A manual for every technique the loaded datapacks define, so new
                         // datapack content shows up in creative without any code change.
                         parameters.holders()

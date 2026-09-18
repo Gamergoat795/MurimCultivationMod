@@ -4,6 +4,7 @@ import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.Realm;
 import com.andymods.murimcultivation.alchemy.PillRecipe;
 import com.andymods.murimcultivation.npc.MartialArtistEntity;
+import com.andymods.murimcultivation.npc.WanderingWarriorEntity;
 import com.andymods.murimcultivation.sect.Sect;
 import com.andymods.murimcultivation.system.SystemQuest;
 import com.andymods.murimcultivation.system.Title;
@@ -22,7 +23,10 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import net.neoforged.neoforge.registries.DataPackRegistryEvent;
 
 @Mod(MurimCultivationMod.MODID)
@@ -62,6 +66,26 @@ public class MurimCultivationMod {
         @SubscribeEvent
         public static void registerEntityAttributes(EntityAttributeCreationEvent event) {
             event.put(ModEntities.MARTIAL_ARTIST.get(), MartialArtistEntity.createAttributes().build());
+            event.put(ModEntities.WANDERING_WARRIOR.get(),
+                    WanderingWarriorEntity.createAttributes().build());
+        }
+
+        /**
+         * Where wandering warriors may appear.
+         *
+         * <p>Registered with {@code REPLACE} so this rule is the whole rule rather than being
+         * ANDed with a monster default that would demand darkness. The biome modifier decides
+         * <em>which</em> biomes and how often; this decides whether a given spot is valid at all,
+         * and it is also where the config veto is enforced, since a datapack weight cannot read
+         * config.
+         */
+        @SubscribeEvent
+        public static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
+            event.register(ModEntities.WANDERING_WARRIOR.get(),
+                    SpawnPlacementTypes.ON_GROUND,
+                    Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    WanderingWarriorEntity::checkSpawnRules,
+                    RegisterSpawnPlacementsEvent.Operation.REPLACE);
         }
 
         @SubscribeEvent
