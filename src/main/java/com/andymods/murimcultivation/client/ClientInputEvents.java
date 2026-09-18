@@ -1,15 +1,18 @@
 package com.andymods.murimcultivation.client;
 
 import com.andymods.murimcultivation.MurimCultivationMod;
+import com.andymods.murimcultivation.client.hud.FocusPromptLayer;
+import com.andymods.murimcultivation.client.screen.SystemScreen;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.MeridianService;
+import com.andymods.murimcultivation.cultivation.focus.FocusPrompt;
 import com.andymods.murimcultivation.network.AttemptBreakthroughPayload;
 import com.andymods.murimcultivation.network.CycleTechniquePayload;
+import com.andymods.murimcultivation.network.FocusResponsePayload;
 import com.andymods.murimcultivation.network.OpenMeridianPayload;
-import com.andymods.murimcultivation.client.screen.SystemScreen;
-import com.andymods.murimcultivation.network.UseTechniquePayload;
 import com.andymods.murimcultivation.network.ToggleMeditationPayload;
+import com.andymods.murimcultivation.network.UseTechniquePayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
@@ -49,6 +52,19 @@ public final class ClientInputEvents {
             if (!data.isAwakened()) {
                 minecraft.player.displayClientMessage(
                         Component.translatable("murimcultivation.message.not_awakened"), true);
+                continue;
+            }
+            // While a breath-rhythm prompt is up, this key answers it rather than ending the
+            // session. No second binding: during meditation there is nothing else B could mean,
+            // and the alternative costs a keybind that would collide with something of someone's.
+            // The server decides what the answer was worth — all the client reports is where its
+            // marker was, and an answer naming a prompt the server has retired is discarded.
+            FocusPrompt prompt = FocusPromptLayer.current();
+            if (prompt != null) {
+                double position = FocusPromptLayer.markerPosition();
+                PacketDistributor.sendToServer(new FocusResponsePayload(prompt.id(), position));
+                FocusPromptLayer.resolve(
+                        position >= prompt.windowStart() && position <= prompt.windowEnd());
                 continue;
             }
             PacketDistributor.sendToServer(ToggleMeditationPayload.INSTANCE);

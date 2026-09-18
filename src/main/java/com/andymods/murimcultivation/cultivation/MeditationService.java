@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.cultivation;
 
 import com.andymods.murimcultivation.config.MurimConfig;
+import com.andymods.murimcultivation.cultivation.focus.FocusService;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -107,6 +108,9 @@ public final class MeditationService {
         CultivationData data = CultivationService.data(player);
         data.setMeditating(true);
         data.setMeditationAnchor(player.position());
+        // Schedule the first breath-rhythm prompt. Without this the gap would still be zero from
+        // resetFocus() and a prompt would fire on the very first tick of the session.
+        FocusService.scheduleNext(player, data);
 
         player.displayClientMessage(Component.translatable("murimcultivation.meditation.started"), true);
         announceLocationQuality(player);
@@ -176,16 +180,20 @@ public final class MeditationService {
      */
     public static double cultivate(ServerPlayer player, CultivationData data, double seconds) {
         double density = QiDensity.multiplierFor(player);
+        double focus = data.focus();
         double gained = MurimConfig.meditationProgressPerSecond()
                 * rampMultiplier(data)
                 * density
                 * CultivationService.cultivationRateMultiplier(data)
+                * focus
                 * seconds;
 
         data.addProgress(gained);
         // Purity is not scaled by the ramp: a clean foundation comes from patience, and
-        // should not be something a single very long session can rush.
-        data.addPurity(MurimConfig.meditationPurityPerMinute() * density * (seconds / 60.0D));
+        // should not be something a single very long session can rush. It *is* scaled by focus,
+        // which is a different axis — the ramp measures how long you have sat, focus measures
+        // whether you are actually there. An empty chair should not quietly refine a foundation.
+        data.addPurity(MurimConfig.meditationPurityPerMinute() * density * focus * (seconds / 60.0D));
         return gained;
     }
 

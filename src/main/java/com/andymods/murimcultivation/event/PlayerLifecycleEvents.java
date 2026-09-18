@@ -69,6 +69,10 @@ public final class PlayerLifecycleEvents {
         // buff interrupted by a respawn or a dimension change must have its modifiers stripped
         // explicitly. Otherwise a player who dies mid-Sword-Force keeps the damage bonus.
         TechniqueBuffs.clearAll(player);
+        // Focus state is transient, but setMeditating(false) only resets it when the flag actually
+        // changes — and a breakthrough already cleared that flag, so an attempt in flight would
+        // otherwise survive a respawn. Reset it explicitly instead of relying on that side effect.
+        CultivationService.data(player).resetFocus();
         CultivationService.clampQiToCapacity(player, CultivationService.data(player));
         CultivationService.applyRealmAttributes(player);
         CultivationService.syncToClient(player);

@@ -7,6 +7,7 @@ import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.EnlightenmentService;
 import com.andymods.murimcultivation.cultivation.MeditationService;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.cultivation.focus.FocusService;
 import com.andymods.murimcultivation.system.ObjectiveKind;
 import com.andymods.murimcultivation.system.QuestTracker;
 import com.andymods.murimcultivation.technique.TechniqueBehaviours;
@@ -52,6 +53,11 @@ public final class CultivationTickEvents {
         if (data.isTechniqueActive(TechniqueBehaviours.WATER_WALKING)) {
             MovementBehaviours.tickWaterWalking(player);
         }
+
+        // Every tick, for the same reason: a two-second sweep judged on the once-a-second
+        // cultivation cadence would be unanswerable. FocusService returns immediately unless the
+        // player is actually meditating.
+        FocusService.tick(player, data);
 
         if (tickDeviation(player, data)) {
             return;

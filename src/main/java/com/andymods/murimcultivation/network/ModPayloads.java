@@ -57,6 +57,11 @@ public final class ModPayloads {
                 EquipTitlePayload.STREAM_CODEC,
                 ServerPayloadHandler::handleEquipTitle);
 
+        registrar.playToServer(
+                FocusResponsePayload.TYPE,
+                FocusResponsePayload.STREAM_CODEC,
+                ServerPayloadHandler::handleFocusResponse);
+
         // Server -> client.
         //
         // These MUST stay as explicit lambdas rather than ClientPayloadHandler::handleX method
@@ -79,6 +84,11 @@ public final class ModPayloads {
                 SystemNotificationPayload.TYPE,
                 SystemNotificationPayload.STREAM_CODEC,
                 (payload, context) -> ClientPayloadHandler.handleSystemNotification(payload, context));
+
+        registrar.playToClient(
+                FocusPromptPayload.TYPE,
+                FocusPromptPayload.STREAM_CODEC,
+                (payload, context) -> ClientPayloadHandler.handleFocusPrompt(payload, context));
     }
 
     private ModPayloads() {

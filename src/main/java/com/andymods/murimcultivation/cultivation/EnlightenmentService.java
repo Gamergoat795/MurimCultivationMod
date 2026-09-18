@@ -53,7 +53,10 @@ public final class EnlightenmentService {
     public static double rollDuringMeditation(ServerPlayer player, CultivationData data, double seconds) {
         double purityFactor = 0.5D + (data.purity() / CultivationData.MAX_PURITY);
         double density = QiDensity.multiplierFor(player);
-        double chance = MurimConfig.enlightenmentChancePerSecond() * seconds * purityFactor * density;
+        // Scaled by focus so insight cannot be farmed by an empty chair. Without this, the one
+        // reward left to an absent player would be the rarest and largest one in the mod.
+        double chance = MurimConfig.enlightenmentChancePerSecond()
+                * seconds * purityFactor * density * data.focus();
 
         if (player.getRandom().nextDouble() >= chance) {
             return 0.0D;

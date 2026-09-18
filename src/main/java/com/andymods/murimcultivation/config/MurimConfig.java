@@ -28,6 +28,19 @@ public final class MurimConfig {
         private final ModConfigSpec.DoubleValue qiPerPrimaryMeridian;
         private final ModConfigSpec.DoubleValue qiPerExtraordinaryVessel;
         private final ModConfigSpec.DoubleValue meditationMoveTolerance;
+        private final ModConfigSpec.IntValue focusPromptMinSeconds;
+        private final ModConfigSpec.IntValue focusPromptMaxSeconds;
+        private final ModConfigSpec.DoubleValue focusSweepSeconds;
+        private final ModConfigSpec.DoubleValue focusWindowWidth;
+        private final ModConfigSpec.IntValue focusMinReactionTicks;
+        private final ModConfigSpec.DoubleValue focusLatencyTolerance;
+        private final ModConfigSpec.DoubleValue focusPerfectFraction;
+        private final ModConfigSpec.DoubleValue focusHitGain;
+        private final ModConfigSpec.DoubleValue focusMissPenalty;
+        private final ModConfigSpec.DoubleValue focusPerfectBonusSeconds;
+        private final ModConfigSpec.IntValue focusBreakthroughSweeps;
+        private final ModConfigSpec.DoubleValue focusBreakthroughTighten;
+        private final ModConfigSpec.DoubleValue focusBreakthroughBonus;
         private final ModConfigSpec.DoubleValue qiDensityRichBiome;
         private final ModConfigSpec.DoubleValue qiDensityBarrenBiome;
         private final ModConfigSpec.DoubleValue qiDensityNight;
@@ -98,6 +111,85 @@ public final class MurimConfig {
                             "simply ends it. A small tolerance stops server-side position",
                             "corrections from cancelling a legitimate sit-down.")
                     .defineInRange("meditationMoveTolerance", 0.75D, 0.05D, 16.0D);
+
+            builder.pop();
+            builder.comment("Attention: the breath-rhythm prompt that stops meditation being",
+                            "something you can walk away from. Raising the interval range makes",
+                            "prompts rarer and gentler; a server that does not want them at all",
+                            "can set focusMissPenalty to 0, which leaves focus pinned at full and",
+                            "restores the pre-prompt behaviour exactly.")
+                    .push("focus");
+
+            focusPromptMinSeconds = builder
+                    .comment("Shortest gap between breath-rhythm prompts, in seconds. The actual",
+                            "gap is rolled between this and the maximum so the rhythm cannot be",
+                            "learned as a fixed beat and answered without looking.")
+                    .defineInRange("promptMinSeconds", 18, 1, 3600);
+
+            focusPromptMaxSeconds = builder
+                    .comment("Longest gap between breath-rhythm prompts, in seconds.")
+                    .defineInRange("promptMaxSeconds", 45, 1, 3600);
+
+            focusSweepSeconds = builder
+                    .comment("How long the marker takes to cross the bar. Shorter is harder.")
+                    .defineInRange("sweepSeconds", 2.5D, 0.5D, 30.0D);
+
+            focusWindowWidth = builder
+                    .comment("Width of the window to hit, as a fraction of the sweep.")
+                    .defineInRange("windowWidth", 0.22D, 0.02D, 1.0D);
+
+            focusMinReactionTicks = builder
+                    .comment("Answers faster than this are rejected as inhuman. Three ticks is",
+                            "150ms, comfortably below a real reaction time but above zero, so a",
+                            "held key or a macro firing on the packet earns nothing.")
+                    .defineInRange("minReactionTicks", 3, 0, 100);
+
+            focusLatencyTolerance = builder
+                    .comment("How far the client's reported marker position may differ from the",
+                            "server's own measurement, as a fraction of the sweep, before the",
+                            "answer is rejected. This is what stops a client claiming a perfect",
+                            "hit every time. Raise it if honest players on bad connections are",
+                            "being rejected; lower it to tighten the check.")
+                    .defineInRange("latencyTolerance", 0.18D, 0.01D, 1.0D);
+
+            focusPerfectFraction = builder
+                    .comment("The middle share of the window that counts as a perfect answer.")
+                    .defineInRange("perfectFraction", 0.34D, 0.0D, 1.0D);
+
+            focusHitGain = builder
+                    .comment("Focus restored by a hit. Focus runs 0 to 1 and multiplies into",
+                            "meditation progress, purity and the odds of sudden insight.")
+                    .defineInRange("hitGain", 0.5D, 0.0D, 1.0D);
+
+            focusMissPenalty = builder
+                    .comment("Focus lost by a missed prompt. At the default, three consecutive",
+                            "misses reach zero and an absent player gains nothing at all. Nothing",
+                            "is ever subtracted from earned progress — missing only stops you",
+                            "gaining. Set to 0 to disable the mechanic entirely.")
+                    .defineInRange("missPenalty", 0.34D, 0.0D, 1.0D);
+
+            focusPerfectBonusSeconds = builder
+                    .comment("A perfect answer is worth this many extra seconds of meditation,",
+                            "so attention is rewarded rather than merely not punished.")
+                    .defineInRange("perfectBonusSeconds", 4.0D, 0.0D, 1000.0D);
+
+            focusBreakthroughSweeps = builder
+                    .comment("How many circulation sweeps a breakthrough asks for. Each is tighter",
+                            "than the last. Set to 1 for a single window.")
+                    .defineInRange("breakthroughSweeps", 3, 1, 10);
+
+            focusBreakthroughTighten = builder
+                    .comment("How much narrower each successive breakthrough sweep is, as a",
+                            "fraction of the base window width. At the default, a three-sweep",
+                            "attempt runs 100%, 75% then 50% of the normal window.")
+                    .defineInRange("breakthroughTighten", 0.25D, 0.0D, 0.9D);
+
+            focusBreakthroughBonus = builder
+                    .comment("How much a flawless circulation adds to breakthrough odds. Still",
+                            "bounded by the breakthrough minChance and maxChance clamps, so this",
+                            "cannot make a hopeless attempt safe — it rewards preparation rather",
+                            "than replacing it.")
+                    .defineInRange("breakthroughBonus", 0.15D, 0.0D, 1.0D);
 
             builder.pop();
             builder.comment("Ambient Qi density: where you cultivate matters").push("qi_density");
@@ -337,6 +429,58 @@ public final class MurimConfig {
 
     public static double meditationRampMultiplier() {
         return VALUES.meditationRampMultiplier.get();
+    }
+
+    public static int focusPromptMinSeconds() {
+        return VALUES.focusPromptMinSeconds.get();
+    }
+
+    public static int focusPromptMaxSeconds() {
+        return VALUES.focusPromptMaxSeconds.get();
+    }
+
+    public static double focusSweepSeconds() {
+        return VALUES.focusSweepSeconds.get();
+    }
+
+    public static double focusWindowWidth() {
+        return VALUES.focusWindowWidth.get();
+    }
+
+    public static int focusMinReactionTicks() {
+        return VALUES.focusMinReactionTicks.get();
+    }
+
+    public static double focusLatencyTolerance() {
+        return VALUES.focusLatencyTolerance.get();
+    }
+
+    public static double focusPerfectFraction() {
+        return VALUES.focusPerfectFraction.get();
+    }
+
+    public static double focusHitGain() {
+        return VALUES.focusHitGain.get();
+    }
+
+    public static double focusMissPenalty() {
+        return VALUES.focusMissPenalty.get();
+    }
+
+    public static double focusPerfectBonusSeconds() {
+        return VALUES.focusPerfectBonusSeconds.get();
+    }
+
+    public static int focusBreakthroughSweeps() {
+        return VALUES.focusBreakthroughSweeps.get();
+    }
+
+    public static double focusBreakthroughTighten() {
+        return VALUES.focusBreakthroughTighten.get();
+    }
+
+    public static double focusBreakthroughBonus() {
+        return VALUES.focusBreakthroughBonus.get();
     }
 
     public static double qiPerPrimaryMeridian() {
