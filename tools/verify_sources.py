@@ -112,6 +112,79 @@ def datapack_ids(registry: str) -> list[str]:
                   for p in glob.glob(f"{DATA_DIR}/{registry}/*.json"))
 
 
+# Types from java.lang, which need no import. Not exhaustive on purpose — it only has to cover
+# what this project actually reaches for, and an unlisted one shows up as a false positive that
+# is fixed by adding it here rather than by something going undetected.
+JAVA_LANG_TYPES = {
+    "String", "Math", "Object", "System", "Integer", "Long", "Double", "Float", "Boolean",
+    "Byte", "Short", "Character", "Number", "Thread", "Class", "Comparable", "Iterable",
+    "Runnable", "StringBuilder", "CharSequence", "Enum", "Record", "Void", "Throwable",
+    "Cloneable", "Iterator", "Exception", "RuntimeException", "IllegalStateException",
+    "IllegalArgumentException", "UnsupportedOperationException", "NullPointerException",
+    "AssertionError", "Error", "ArithmeticException", "ClassCastException",
+    "IndexOutOfBoundsException", "NumberFormatException",
+}
+
+
+def check_unresolved_names() -> None:
+    """Every type named in the code must be importable from somewhere.
+
+    This catches the single most common way a push fails CI: using a Minecraft class without
+    importing it, or importing it from the wrong package. Both cost a full CI cycle, because
+    nothing local has the NeoForge jars and so nothing local can compile. This cannot type-check
+    — it only asks whether a capitalised name used as a static receiver or a constructor could
+    resolve at all, from an import, the same package, the same file, or java.lang.
+
+    Two conventions make it workable without a parser. A name in SCREAMING_CASE is a constant
+    rather than a type, so those are skipped — otherwise every {@code VALUES.get()} looks like an
+    unresolved class. And a name preceded by a dot is a nested type or a member, already covered
+    by whatever qualified it, so the pattern refuses to match after one.
+
+    It deliberately does NOT catch an import from the wrong package, which is what actually broke
+    the wandering-warrior push: the name resolves, it just resolves to nothing real. Only a
+    compiler can see that.
+    """
+    files = java_files()
+
+    # Every type this project declares, by package across both source roots — a test and the
+    # class it tests share a package but never a directory.
+    declared: dict[str, set[str]] = {}
+    for path in files:
+        declared.setdefault(package_of(path), set()).add(os.path.basename(path)[:-len(".java")])
+
+    use = re.compile(r"(?<![\w.$])([A-Z][A-Za-z0-9_]*)\s*\.")
+    construct = re.compile(r"\bnew\s+([A-Z][A-Za-z0-9_]*)")
+    declares = re.compile(r"\b(?:class|interface|enum|record|@interface)\s+([A-Z][A-Za-z0-9_]*)")
+    imports = re.compile(r"^\s*import\s+(?:static\s+)?([\w.]+)\s*;", re.M)
+    constant = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+    for path in files:
+        source = open(path, encoding="utf-8").read()
+        available = set(JAVA_LANG_TYPES) | set(declares.findall(source))
+        available |= declared.get(package_of(path), set())
+
+        wildcard = False
+        for imported in imports.findall(source):
+            parts = imported.split(".")
+            if parts[-1] == "*":
+                wildcard = True
+                break
+            available.add(parts[-1])
+            # A static member import also brings its owning type's name into scope.
+            if len(parts) >= 2 and parts[-2][:1].isupper():
+                available.add(parts[-2])
+        if wildcard:
+            # Nothing can be concluded, and this project does not use wildcard imports anyway.
+            continue
+
+        body = strip_code(source)
+        used = set(use.findall(body)) | set(construct.findall(body))
+        for name in sorted(used - available):
+            if constant.match(name):
+                continue
+            fail(f"{path}: '{name}' is used but not imported, declared here, or in this package")
+
+
 def check_translation_keys() -> None:
     """Every key the code or datapack content references must exist, and vice versa.
 
@@ -429,6 +502,7 @@ def check_textures() -> list[str]:
 
 def main() -> int:
     check_structure()
+    check_unresolved_names()
     check_json_parses()
     check_translation_keys()
     check_datapack_consistency()
@@ -442,7 +516,7 @@ def main() -> int:
             print(f"  {problem}")
         return 1
 
-    print(f"verify_sources: OK — {java_count} Java files, structure, JSON, "
+    print(f"verify_sources: OK — {java_count} Java files, structure, names, JSON, "
           f"translation keys and datapack consistency all clean")
 
     if missing_art:

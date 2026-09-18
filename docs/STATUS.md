@@ -2,23 +2,43 @@
 
 Everything that is waiting on **you** — either something to do, or a decision only you can make.
 
-Last updated against commit `8d46871`. This file goes stale; the two things that never lie are
+Last updated against commit `9f2cbbd`. This file goes stale; the two things that never lie are
 `python3 tools/verify_sources.py` and the GitHub Actions run on your latest push.
 
 ## Where it stands
 
 | | |
 |---|---|
-| Built and CI-green | Core data layer, cultivation loop, 8 martial arts, System window + quests, sects, alchemy, teaching NPC, attention minigames |
-| Tests | 188, all passing |
-| Source files | 120 |
-| Art | **Complete.** 8 item textures at 32×32, 5 block textures at 16×16 |
+| Built and CI-green | Core data layer, cultivation loop, 8 martial arts, System window + quests, sects, alchemy, teaching NPC, attention minigames, honour/infamy, wandering warriors, duels |
+| Tests | 245 across 24 files |
+| Source files | 110 |
+| Art | **Complete** for items and blocks. Both new mobs render on vanilla player models |
 | Never run anywhere | `./gradlew runServer`, `./gradlew runClient` |
 | Never played | All of it |
 
-The gate currently reports nothing outstanding. That means every texture a model asks for exists
-and is correctly shaped — it does **not** mean the mod has been seen working, because nothing here
-has ever been launched.
+The gate reports nothing outstanding. That means every texture a model asks for exists and is
+correctly shaped, every translation key resolves, and the datapack is internally consistent — it
+does **not** mean the mod has been seen working, because nothing here has ever been launched.
+
+## Since you last read this
+
+Your playtest notes are done, plus the first half of the content pass:
+
+- **Both bugs fixed.** The breakthrough minigame had never worked for anyone — the prompt bar was
+  being wiped within a second of appearing, on every attempt, by a sync that fires once a second.
+  Techniques did nothing because three of the four slot keys shipped with no key bound and the
+  fourth held whatever art the registry yielded first. `C` now selects and `G` casts, so two keys
+  reach all four arts.
+- **Honour and infamy** are real values, 0–100 each, and they gate which sects will take you.
+- **Wandering warriors** spawn across the Overworld at a realm rolled from the local Qi-richness
+  and the distance from world spawn. They are neutral and never pick a fight.
+- **Duels.** Right-click to challenge. They accept, refuse, or attack if your name is bad enough.
+  A duel ends on a yield and cannot kill anyone, in either direction.
+
+**One thing to know before you load an existing dev world:** the save format changed. Sect standing
+moved inside a new `murim_standing` block, so an existing world loses its sect reputation and keeps
+everything else. Nothing fails to load. Same break M4 made, and for the same reason — every field
+is optional, and it is cheap now and expensive later.
 
 ---
 
@@ -39,14 +59,31 @@ start a dedicated server, because a client-only class reached from common code o
 claim that this mod is "dist-clean" is an inference from reading the code. This makes it an
 observation.
 
-## 2. Play the minigame and tell me if it feels wrong.
+## 2. Play it. This is now the biggest gap by far.
 
 ```
 ./gradlew runClient
 ```
 
-Read a Qi gathering manual to awaken, then press `B` to meditate. A bar sweeps bottom-centre every
-18–45 seconds; press `B` again inside the lit window.
+**Start with the two things that were broken**, since fixing them is inferred from reading the code
+and nothing more:
+
+- Press `X` to attempt a breakthrough and confirm the bar survives all three sweeps. It never has.
+- Learn an art, then press `C` to select and `G` to cast. The bar on the left prints the key that
+  will fire each slot, so if it says nothing is bound, that is the bug and not you.
+
+**Then the new content:**
+
+- Give yourself a Wandering Warrior spawn egg from the creative tab. Its name states its tier and
+  realm. Right-click to challenge it; fight it down and watch it yield rather than die.
+- Challenge one far above you and confirm you are **spared** rather than killed. This is the single
+  most important thing to check, because the whole fixed-difficulty design rests on it.
+- Then ambush one without challenging, and confirm `/murim standing` shows infamy rising and an
+  orthodox sect subsequently refusing you.
+- Kill one that has already yielded. It should be the worst outcome available to you.
+
+**Then meditation**, as before. Read a Qi gathering manual to awaken, then press `B` to meditate. A
+bar sweeps bottom-centre every 18–45 seconds; press `B` again inside the lit window.
 
 **Nothing about how this feels has been verified.** The timings below are my guesses. A 2.5-second
 sweep with a 22% window might be trivially easy or genuinely annoying, and no test can tell me
