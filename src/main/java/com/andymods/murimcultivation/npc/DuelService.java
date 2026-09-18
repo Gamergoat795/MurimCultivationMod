@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.npc;
 
 import com.andymods.murimcultivation.config.MurimConfig;
+import net.minecraft.util.StringRepresentable;
 
 /**
  * Whether a challenge is accepted, and on what terms.
@@ -36,23 +37,43 @@ public final class DuelService {
         }
     }
 
-    /** How a wanderer answers being challenged. */
-    public enum Verdict {
+    /**
+     * How a wanderer answers being challenged.
+     *
+     * <p>Carries explicit serialized names rather than deriving them from {@code name()}, which is
+     * the convention every other enum in the mod follows — and the reason is mechanical, not
+     * stylistic: {@code tools/verify_sources.py} reads the {@code NAME("id")} form to work out which
+     * translation keys a runtime-built prefix can produce. An enum without them is invisible to that
+     * check, so a missing message would ship silently.
+     */
+    public enum Verdict implements StringRepresentable {
+
         /** They accept, and the duel begins. */
-        ACCEPTED,
+        ACCEPTED("accepted"),
         /** They are far enough above the challenger to consider the request presumptuous. */
-        REFUSED_TOO_STRONG,
+        REFUSED_TOO_STRONG("refused_too_strong"),
         /** They are far enough below to know it would be a beating, not a duel. */
-        REFUSED_TOO_WEAK,
+        REFUSED_TOO_WEAK("refused_too_weak"),
         /** The challenger's reputation precedes them; there is no parley to be had. */
-        ATTACKS_INSTEAD;
+        ATTACKS_INSTEAD("attacks_instead");
+
+        private final String id;
+
+        Verdict(String id) {
+            this.id = id;
+        }
 
         public boolean accepted() {
             return this == ACCEPTED;
         }
 
+        @Override
+        public String getSerializedName() {
+            return id;
+        }
+
         public String translationKey() {
-            return "murimcultivation.duel." + name().toLowerCase(java.util.Locale.ROOT);
+            return "murimcultivation.duel." + id;
         }
     }
 

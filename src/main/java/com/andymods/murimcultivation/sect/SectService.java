@@ -3,6 +3,7 @@ package com.andymods.murimcultivation.sect;
 import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
+import com.andymods.murimcultivation.standing.StandingService;
 import com.andymods.murimcultivation.system.SystemNotification;
 import com.andymods.murimcultivation.system.SystemNotifications;
 import net.minecraft.core.Registry;
@@ -59,7 +60,10 @@ public final class SectService {
         NOT_AWAKENED("murimcultivation.sect.refused.not_awakened"),
         REALM_TOO_LOW("murimcultivation.sect.refused.realm"),
         ALREADY_MEMBER("murimcultivation.sect.refused.already_member"),
-        OPPOSED_ALLEGIANCE("murimcultivation.sect.refused.opposed");
+        OPPOSED_ALLEGIANCE("murimcultivation.sect.refused.opposed"),
+        HONOUR_TOO_LOW("murimcultivation.sect.refused.honour"),
+        INFAMY_TOO_HIGH("murimcultivation.sect.refused.notorious"),
+        INFAMY_TOO_LOW("murimcultivation.sect.refused.unfeared");
 
         private final String translationKey;
 
@@ -108,6 +112,31 @@ public final class SectService {
                     && sect.alignment().opposes(entry.getValue().alignment())
                     && isMemberOf(player, otherId)) {
                 return JoinResult.OPPOSED_ALLEGIANCE;
+            }
+        }
+
+        // Standing is the last gate, and it is checked here rather than earlier so a player is told
+        // about the concrete obstacles — unknown sect, wrong realm, already sworn elsewhere — before
+        // being told about a reputation they may not yet know they have.
+        //
+        // This is the gate M8's first commit wrote and deliberately left disconnected: until duels
+        // existed nothing in the game could move honour, so enforcing it would have made two of the
+        // three shipped sects unjoinable with no way to qualify. Duels exist now, so it is live.
+        StandingService.Verdict standing = StandingService.judge(
+                sect.alignment(),
+                CultivationService.data(player).standing(),
+                StandingService.Tuning.fromConfig());
+        switch (standing) {
+            case HONOUR_TOO_LOW -> {
+                return JoinResult.HONOUR_TOO_LOW;
+            }
+            case INFAMY_TOO_HIGH -> {
+                return JoinResult.INFAMY_TOO_HIGH;
+            }
+            case INFAMY_TOO_LOW -> {
+                return JoinResult.INFAMY_TOO_LOW;
+            }
+            case ACCEPTED -> {
             }
         }
 

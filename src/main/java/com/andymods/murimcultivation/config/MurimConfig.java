@@ -95,6 +95,12 @@ public final class MurimConfig {
         private final ModConfigSpec.IntValue warriorPressurePerHundredBlocks;
         private final ModConfigSpec.IntValue warriorMaxDistancePressure;
         private final ModConfigSpec.IntValue warriorMaxNaturalRealmTier;
+        private final ModConfigSpec.IntValue duelMaxRealmGap;
+        private final ModConfigSpec.IntValue duelInfamyThatProvokes;
+        private final ModConfigSpec.DoubleValue duelYieldHealthFraction;
+        private final ModConfigSpec.IntValue duelTruceTicks;
+        private final ModConfigSpec.IntValue duelSectReputation;
+        private final ModConfigSpec.IntValue warriorSectChance;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -522,6 +528,52 @@ public final class MurimConfig {
                             "as something only a deliberately placed encounter can be.")
                     .defineInRange("maxNaturalRealmTier", 5, 1, 100);
 
+            duelMaxRealmGap = builder
+                    .comment("How many realms apart two cultivators may be and still have a duel",
+                            "worth fighting. Checked in BOTH directions. Upward it means a Master",
+                            "refuses a challenger far beneath it, so the Experts in the far reaches",
+                            "are something to grow into. Downward it closes an honour farm: without",
+                            "it a Transcendent could collect honour off thugs forever, and honour won",
+                            "by beating people who cannot fight back is what the word excludes.")
+                    .defineInRange("maxRealmGap", 2, 0, 100);
+
+            duelInfamyThatProvokes = builder
+                    .comment("Infamy at or above which a wanderer stops parleying and simply attacks.",
+                            "This is the 'wanderers attack on sight' half of infamy, arriving as a",
+                            "consequence of the number rather than as a separate feature.")
+                    .defineInRange("infamyThatProvokes", 60, 0, 100);
+
+            duelYieldHealthFraction = builder
+                    .comment("The share of maximum health at which a duellist yields. Applies to both",
+                            "sides: beat a wanderer to this and it yields rather than dying, and lose",
+                            "to one and it spares you rather than killing you. That second half is",
+                            "what makes challenging someone above you a gamble you can survive, and",
+                            "so what makes the fixed-difficulty world fair. Never resolves below one",
+                            "health, so a yield always leaves someone alive.")
+                    .defineInRange("yieldHealthFraction", 0.2D, 0.01D, 0.9D);
+
+            duelTruceTicks = builder
+                    .comment("How long a warrior stands down after a duel ends, in ticks. 20 ticks",
+                            "is a second. While standing down it will not fight back at all, so this",
+                            "is also the window in which killing one that yielded is possible --",
+                            "which is the point, since sparing someone only means something when",
+                            "refusing to is available.")
+                    .defineInRange("truceTicks", 400, 20, 24000);
+
+            duelSectReputation = builder
+                    .comment("Sect standing gained for beating one of their people honourably. Killing",
+                            "one that had yielded costs twice this with their sect instead. Beating a",
+                            "sect's member also costs standing with their enemies, at the opposed-sect",
+                            "penalty -- this is the first thing in the game that grants sect standing",
+                            "from play rather than from a command.")
+                    .defineInRange("sectReputation", 25, 0, 10000);
+
+            warriorSectChance = builder
+                    .comment("Percentage of wandering warriors who belong to a sect. Most do not, on",
+                            "purpose: a world where everyone belongs to something leaves nothing for",
+                            "belonging to mean. Only affiliated warriors move sect standing.")
+                    .defineInRange("sectChance", 35, 0, 100);
+
             builder.pop();
             builder.comment("Performance and presentation").push("general");
 
@@ -833,6 +885,30 @@ public final class MurimConfig {
 
     public static int warriorMaxNaturalRealmTier() {
         return VALUES.warriorMaxNaturalRealmTier.get();
+    }
+
+    public static int duelMaxRealmGap() {
+        return VALUES.duelMaxRealmGap.get();
+    }
+
+    public static int duelInfamyThatProvokes() {
+        return VALUES.duelInfamyThatProvokes.get();
+    }
+
+    public static double duelYieldHealthFraction() {
+        return VALUES.duelYieldHealthFraction.get();
+    }
+
+    public static int duelTruceTicks() {
+        return VALUES.duelTruceTicks.get();
+    }
+
+    public static int duelSectReputation() {
+        return VALUES.duelSectReputation.get();
+    }
+
+    public static int warriorSectChance() {
+        return VALUES.warriorSectChance.get();
     }
 
     public static int cultivationTickInterval() {
