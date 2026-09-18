@@ -5,6 +5,7 @@ import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.MeditationService;
 import com.andymods.murimcultivation.cultivation.MeridianService;
+import com.andymods.murimcultivation.cultivation.focus.FocusService;
 import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.technique.TechniqueService;
 import net.minecraft.network.chat.Component;
@@ -134,6 +135,22 @@ public final class ServerPayloadHandler {
             }
             CultivationService.applyAttributes(player);
             CultivationService.syncToClient(player);
+        });
+    }
+
+    /**
+     * The player says they answered a breath-rhythm prompt at a given point in the sweep.
+     *
+     * <p>Everything that decides whether that counts happens in {@code FocusService.answer} — the
+     * prompt id must match the one outstanding, the claimed position is checked against how long
+     * the server actually waited, and the verdict is the server's. A client can lie about the
+     * number in this packet; it cannot make the server believe it.
+     */
+    public static void handleFocusResponse(FocusResponsePayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer player) {
+                FocusService.answer(player, payload.promptId(), payload.position());
+            }
         });
     }
 

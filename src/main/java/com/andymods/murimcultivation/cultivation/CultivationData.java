@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.cultivation;
 
 import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.cultivation.focus.FocusPrompt;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceKey;
@@ -42,6 +43,8 @@ public class CultivationData {
 
     public static final double MIN_PURITY = 0.0D;
     public static final double MAX_PURITY = 100.0D;
+    /** Focus runs 0..1; a fresh session starts here. */
+    public static final double FULL_FOCUS = 1.0D;
     /** A new cultivator's foundation: neither refined nor ruined. */
     public static final double DEFAULT_PURITY = 50.0D;
 
@@ -67,6 +70,12 @@ public class CultivationData {
     private final Map<ResourceLocation, Integer> techniqueCooldowns = new HashMap<>();
     private final Map<ResourceLocation, Integer> activeTechniques = new HashMap<>();
     private int selectedSlot;
+    private double focus = FULL_FOCUS;
+    private FocusPrompt focusPrompt;
+    private int focusPromptRemainingTicks;
+    private int focusPromptElapsedTicks;
+    private int focusNextPromptTicks;
+    private int focusPromptSequence;
 
     public static final Codec<CultivationData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceKey.codec(MurimRegistries.REALM).optionalFieldOf("realm").forGetter(CultivationData::realmKey),
@@ -514,6 +523,9 @@ public class CultivationData {
     public void setMeditating(boolean meditating) {
         if (this.meditating != meditating) {
             this.meditationTicks = 0;
+            // Focus describes one sitting, exactly as the ramp does. Standing up and sitting back
+            // down forfeits both rather than banking either.
+            resetFocus();
         }
         this.meditating = meditating;
         if (!meditating) {
@@ -545,6 +557,91 @@ public class CultivationData {
 
     public void incrementMeditationTicks() {
         this.meditationTicks++;
+    }
+
+    // --- Focus (transient) ------------------------------------------------------------
+
+    /**
+     * How attentive this session is, 0..1, multiplying into meditation progress, purity and the
+     * odds of sudden insight.
+     *
+     * <p>Transient by construction, like the rest of the meditation state: focus describes one
+     * sitting, and carrying it across a relog would let a player bank attentiveness. It starts
+     * full so a short session that ends before the first prompt is never penalised.
+     */
+    public double focus() {
+        return focus;
+    }
+
+    public void setFocus(double focus) {
+        this.focus = Math.max(0.0D, Math.min(FULL_FOCUS, focus));
+    }
+
+    /** The prompt awaiting an answer, or {@code null} if none is in flight. */
+    public FocusPrompt focusPrompt() {
+        return focusPrompt;
+    }
+
+    public void setFocusPrompt(FocusPrompt prompt, int lifetimeTicks) {
+        this.focusPrompt = prompt;
+        this.focusPromptRemainingTicks = lifetimeTicks;
+        this.focusPromptElapsedTicks = 0;
+    }
+
+    public void clearFocusPrompt() {
+        this.focusPrompt = null;
+        this.focusPromptRemainingTicks = 0;
+        this.focusPromptElapsedTicks = 0;
+    }
+
+    /**
+     * How long the outstanding prompt has been waiting, in server ticks.
+     *
+     * <p>This is the clock the verdict is measured against, and it is the server's — a client
+     * cannot slow it down by hiding the GUI or speed it up by any means, which is the whole
+     * reason the answer carries a claimed position rather than a claimed outcome.
+     */
+    public int focusPromptElapsedTicks() {
+        return focusPromptElapsedTicks;
+    }
+
+    /** The next prompt id. Monotonic per session, so a replayed answer cannot be credited twice. */
+    public int nextFocusPromptId() {
+        return ++focusPromptSequence;
+    }
+
+    public int focusNextPromptTicks() {
+        return focusNextPromptTicks;
+    }
+
+    public void setFocusNextPromptTicks(int ticks) {
+        this.focusNextPromptTicks = ticks;
+    }
+
+    /**
+     * Advances the focus clocks by one tick.
+     *
+     * @return true on the tick an outstanding prompt runs out of time, so the caller can score it
+     *         as a miss. Shaped like {@link #tickActiveTechniques()} rather than inventing a
+     *         second timer idiom.
+     */
+    public boolean tickFocusPrompt() {
+        if (focusPrompt == null) {
+            if (focusNextPromptTicks > 0) {
+                focusNextPromptTicks--;
+            }
+            return false;
+        }
+        focusPromptElapsedTicks++;
+        return --focusPromptRemainingTicks <= 0;
+    }
+
+    /** Drops focus state back to a fresh session. */
+    public void resetFocus() {
+        focus = FULL_FOCUS;
+        focusNextPromptTicks = 0;
+        focusPromptSequence = 0;
+        clearFocusPrompt();
     }
 
     // --- Bulk copy --------------------------------------------------------------------
@@ -583,5 +680,6 @@ public class CultivationData {
         copyFrom(new CultivationData());
         setMeditating(false);
         clearTransientCombatState();
+        resetFocus();
     }
 }
