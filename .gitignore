@@ -38,3 +38,7 @@ crash-reports/
 
 # CI build log, teed so the workflow can summarise compiler diagnostics
 build-output.txt
+
+# Python bytecode, from running the tools in tools/
+__pycache__/
+*.pyc
