@@ -16,6 +16,7 @@ import glob
 import json
 import os
 import re
+import struct
 import sys
 
 MODID = "murimcultivation"
@@ -336,6 +337,53 @@ def check_quest_consistency(realms: list, techniques: dict) -> None:
              "cultivator would open the System window to an empty list")
 
 
+def png_size(path: str) -> tuple[int, int]:
+    """Width and height straight out of the IHDR, which is always the first chunk."""
+    with open(path, "rb") as handle:
+        header = handle.read(24)
+    if header[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("not a PNG")
+    return struct.unpack(">II", header[16:24])
+
+
+def check_texture_shapes() -> list[str]:
+    """
+    Reports textures whose dimensions will render wrong.
+
+    A sprite is mapped onto a square UV, so a non-square image is drawn squashed. A size that is
+    not a power of two costs mipmap levels, and anything far above 16 pixels bloats the atlas for
+    something drawn at 16 pixels on screen.
+
+    **Reported, not fatal.** These load — they look wrong, which is a different thing from broken,
+    and blocking every commit over a cosmetic defect would stop unrelated work. The report prints
+    on every run, which is enough: this check exists because six textures were added at sizes like
+    1024x1028 and nothing said a word until someone looked at the pixel dimensions by hand.
+    """
+    problems = []
+    for root, _, files in os.walk(os.path.join(ASSETS, "textures")):
+        for name in sorted(files):
+            if not name.endswith(".png"):
+                continue
+            path = os.path.join(root, name)
+            rel = os.path.relpath(path, ASSETS)
+            try:
+                width, height = png_size(path)
+            except (OSError, ValueError) as problem:
+                fail(f"assets/{rel}: unreadable as a PNG ({problem})")
+                continue
+
+            faults = []
+            if width != height:
+                faults.append("not square, so it renders squashed")
+            if width & (width - 1) or height & (height - 1):
+                faults.append("not a power of two, which costs mipmap levels")
+            if width > 128:
+                faults.append(f"{width}px is {width // 16}x vanilla's 16px and bloats the atlas")
+            if faults:
+                problems.append(f"assets/{rel}  {width}x{height}\n      " + "\n      ".join(faults))
+    return problems
+
+
 def check_textures() -> list[str]:
     """
     Cross-checks every texture a model references against the files on disk.
@@ -383,6 +431,7 @@ def main() -> int:
     check_translation_keys()
     check_datapack_consistency()
     missing_art = check_textures()
+    misshapen_art = check_texture_shapes()
 
     java_count = len(java_files())
     if failures:
@@ -399,6 +448,12 @@ def main() -> int:
         for entry in missing_art:
             print(f"  {entry}")
         print("\n  These render as the missing-texture checkerboard until drawn. See docs/ART.md.")
+
+    if misshapen_art:
+        print(f"\nart to fix — {len(misshapen_art)} texture(s) with unusable dimensions:")
+        for entry in misshapen_art:
+            print(f"  {entry}")
+        print("\n  Re-export square, at a power of two. 16 or 32 px. See docs/ART.md.")
     return 0
 
 
