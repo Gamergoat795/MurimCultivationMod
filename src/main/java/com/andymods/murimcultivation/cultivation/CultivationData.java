@@ -357,6 +357,18 @@ public class CultivationData {
         return selectedSlot;
     }
 
+    /**
+     * Overwrites the selection, clamping to a real slot.
+     *
+     * <p>Exists for the client, which has no business cycling on its own: the server owns the
+     * selection and ships it alongside the sync payload. Before this, the client's copy sat at
+     * zero forever, so the bar's highlight never moved and the cycle key looked broken even
+     * though the server was tracking it correctly.
+     */
+    public void setSelectedSlot(int slot) {
+        this.selectedSlot = Math.max(0, Math.min(slot, LOADOUT_SIZE - 1));
+    }
+
     /** Advances the selection to the next occupied slot, wrapping. */
     public int cycleSelectedSlot() {
         if (loadout.isEmpty()) {

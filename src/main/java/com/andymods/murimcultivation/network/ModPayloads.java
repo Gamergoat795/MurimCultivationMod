@@ -38,6 +38,11 @@ public final class ModPayloads {
                 ServerPayloadHandler::handleUseTechnique);
 
         registrar.playToServer(
+                UseSelectedTechniquePayload.TYPE,
+                UseSelectedTechniquePayload.STREAM_CODEC,
+                ServerPayloadHandler::handleUseSelectedTechnique);
+
+        registrar.playToServer(
                 CycleTechniquePayload.TYPE,
                 CycleTechniquePayload.STREAM_CODEC,
                 ServerPayloadHandler::handleCycleTechnique);

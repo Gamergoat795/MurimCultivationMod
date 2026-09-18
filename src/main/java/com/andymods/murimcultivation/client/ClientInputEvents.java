@@ -12,6 +12,7 @@ import com.andymods.murimcultivation.network.CycleTechniquePayload;
 import com.andymods.murimcultivation.network.FocusResponsePayload;
 import com.andymods.murimcultivation.network.OpenMeridianPayload;
 import com.andymods.murimcultivation.network.ToggleMeditationPayload;
+import com.andymods.murimcultivation.network.UseSelectedTechniquePayload;
 import com.andymods.murimcultivation.network.UseTechniquePayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -83,7 +84,19 @@ public final class ClientInputEvents {
                             Component.translatable("murimcultivation.meridian.network_complete"), true));
         }
 
-        // Loadout slots. The client sends only which slot was pressed.
+        // The default way to cast: the server reads its own selection, so this carries no slot
+        // number at all and cycling then immediately casting cannot fire the previous art.
+        while (KeyBindings.USE_SELECTED_TECHNIQUE.consumeClick()) {
+            if (!data.isAwakened()) {
+                minecraft.player.displayClientMessage(
+                        Component.translatable("murimcultivation.message.not_awakened"), true);
+                continue;
+            }
+            PacketDistributor.sendToServer(UseSelectedTechniquePayload.INSTANCE);
+        }
+
+        // Optional per-slot shortcuts, all unbound by default. The client sends only which slot
+        // was pressed.
         for (int slot = 0; slot < KeyBindings.TECHNIQUE_SLOTS.length; slot++) {
             while (KeyBindings.TECHNIQUE_SLOTS[slot].consumeClick()) {
                 if (!data.isAwakened()) {

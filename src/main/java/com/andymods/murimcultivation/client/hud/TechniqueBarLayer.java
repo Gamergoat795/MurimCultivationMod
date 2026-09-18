@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.client.hud;
 
 import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.client.KeyBindings;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.item.MartialManualItem;
@@ -42,6 +43,7 @@ public class TechniqueBarLayer implements LayeredDraw.Layer {
     private static final int COLOR_COST_OK = 0xFF54C8FF;
     private static final int COLOR_COST_SHORT = 0xFFFF6B6B;
     private static final int COLOR_MASTERY = 0xFFA5D6A7;
+    private static final int COLOR_KEY = 0xFFB9B9B9;
 
     @Override
     public void render(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
@@ -80,7 +82,7 @@ public class TechniqueBarLayer implements LayeredDraw.Layer {
         drawBorder(guiGraphics, x, y, SLOT_SIZE, SLOT_SIZE,
                 selected ? COLOR_SLOT_SELECTED : COLOR_SLOT_BORDER);
 
-        // The slot number, so a player can see which key maps to which art.
+        // The slot number, which is what the System window and the learn message name it by.
         guiGraphics.drawString(minecraft.font, String.valueOf(slot + 1), x + 2, y + 2, COLOR_TEXT, true);
 
         if (bound.isEmpty()) {
@@ -99,13 +101,22 @@ public class TechniqueBarLayer implements LayeredDraw.Layer {
         guiGraphics.drawString(minecraft.font, name, textX, y + 1, COLOR_TEXT, true);
         guiGraphics.drawString(minecraft.font, stars(mastery), textX, y + 11, COLOR_MASTERY, true);
 
+        int cursor = textX + minecraft.font.width(name) + 6;
+
         if (technique.isPresent()) {
             double cost = TechniqueMastery.qiCost(technique.get().qiCost(), mastery);
             boolean affordable = data.qi() >= cost;
             Component costText = Component.literal(String.valueOf(Math.round(cost)));
-            guiGraphics.drawString(minecraft.font, costText,
-                    textX + minecraft.font.width(name) + 6, y + 1,
+            guiGraphics.drawString(minecraft.font, costText, cursor, y + 1,
                     affordable ? COLOR_COST_OK : COLOR_COST_SHORT, true);
+            cursor += minecraft.font.width(costText) + 6;
+        }
+
+        // The key that actually casts this slot right now. A slot number on its own is worse
+        // than useless when nothing is bound to it — it reads as ready.
+        Component key = castKeyFor(slot, selected);
+        if (!key.getString().isEmpty()) {
+            guiGraphics.drawString(minecraft.font, key, cursor, y + 1, COLOR_KEY, true);
         }
 
         renderCooldownSweep(guiGraphics, data, id, technique, mastery, x, y);
@@ -130,6 +141,19 @@ public class TechniqueBarLayer implements LayeredDraw.Layer {
         int veilHeight = (int) Math.ceil(SLOT_SIZE * Math.min(1.0D, remaining / (double) total));
         guiGraphics.fill(x + 1, y + SLOT_SIZE - veilHeight, x + SLOT_SIZE - 1, y + SLOT_SIZE - 1,
                 COLOR_COOLDOWN_VEIL);
+    }
+
+    /**
+     * The key that will cast this slot: its own shortcut if the player bound one, otherwise the
+     * select-and-cast key when this is the selected slot. Empty when neither applies, which is
+     * the honest answer — cycle to it first.
+     */
+    private static Component castKeyFor(int slot, boolean selected) {
+        Component direct = KeyBindings.keyLabel(KeyBindings.TECHNIQUE_SLOTS[slot]);
+        if (!direct.getString().isEmpty()) {
+            return direct;
+        }
+        return selected ? KeyBindings.keyLabel(KeyBindings.USE_SELECTED_TECHNIQUE) : Component.empty();
     }
 
     private static String stars(int mastery) {

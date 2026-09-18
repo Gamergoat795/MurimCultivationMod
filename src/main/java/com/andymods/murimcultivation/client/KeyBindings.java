@@ -2,6 +2,7 @@ package com.andymods.murimcultivation.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
@@ -41,18 +42,36 @@ public final class KeyBindings {
             CATEGORY);
 
     /**
-     * One key per loadout slot. Slots 2-4 ship unbound so a player assigns them to keys that do
-     * not already mean something in their setup. An unbound mapping is still registered and still
+     * Casts whatever slot the cycle key has selected. Together with {@link #CYCLE_TECHNIQUE} this
+     * is the default way to use every art you have bound, and it is the only technique key that
+     * ships with a key on it.
+     *
+     * <p>G rather than the more ergonomic R because Essential (essential.gg) puts its emote wheel
+     * on R. Minecraft lets both mappings fire on a shared key, so the collision is not cosmetic:
+     * you would emote and cast at the same time. V was the other candidate and is worse — Simple
+     * Voice Chat has it. Anyone who runs neither can rebind to R in the controls screen.
+     */
+    public static final KeyMapping USE_SELECTED_TECHNIQUE = new KeyMapping(
+            "key.murimcultivation.use_selected_technique",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_G,
+            CATEGORY);
+
+    /**
+     * One key per loadout slot, for players who would rather reach an art directly than cycle to
+     * it. All four ship unbound: they are shortcuts over the select-and-cast pair above, not the
+     * only way in, so claiming four keys by default would be taking keys from other mods to
+     * duplicate something that already works. An unbound mapping is still registered and still
      * appears in the controls screen.
      *
-     * <p>Slot 1 defaults to G rather than the more ergonomic R because Essential (essential.gg)
-     * puts its emote wheel on R. Minecraft lets both mappings fire on a shared key, so the
-     * collision is not cosmetic: you would emote and cast at the same time. V was the other
-     * candidate and is worse — Simple Voice Chat has it. Anyone who does not run either mod can
-     * rebind to R in the controls screen.
+     * <p>Slot 1 used to default to G, which made it the only reachable slot — and since
+     * {@code learnall} bound arts in registry order, that one reachable slot was as likely as not
+     * to hold something gated far above the player's realm. Four uniformly optional shortcuts
+     * behind one working cast key is the honest arrangement.
      */
     public static final KeyMapping[] TECHNIQUE_SLOTS = {
-            techniqueSlot(1, GLFW.GLFW_KEY_G),
+            techniqueSlot(1, InputConstants.UNKNOWN.getValue()),
             techniqueSlot(2, InputConstants.UNKNOWN.getValue()),
             techniqueSlot(3, InputConstants.UNKNOWN.getValue()),
             techniqueSlot(4, InputConstants.UNKNOWN.getValue()),
@@ -73,6 +92,20 @@ public final class KeyBindings {
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_C,
             CATEGORY);
+
+    /**
+     * A mapping's current key in square brackets, or empty if it has none.
+     *
+     * <p>Reads the live mapping rather than the default, because a player who has rebound a key
+     * needs to be told the key they actually have. This is also why the server never names a key
+     * in its own messages: keybinds are client state, so only the client can say what they are.
+     */
+    public static Component keyLabel(KeyMapping mapping) {
+        if (mapping.isUnbound()) {
+            return Component.empty();
+        }
+        return Component.literal("[").append(mapping.getTranslatedKeyMessage()).append("]");
+    }
 
     private static KeyMapping techniqueSlot(int slot, int defaultKey) {
         return new KeyMapping(
@@ -100,7 +133,8 @@ public final class KeyBindings {
      */
     private static KeyMapping[] buildAll() {
         KeyMapping[] all = Stream.concat(
-                        Stream.of(MEDITATE, BREAKTHROUGH, OPEN_MERIDIAN, CYCLE_TECHNIQUE, OPEN_SYSTEM),
+                        Stream.of(MEDITATE, BREAKTHROUGH, OPEN_MERIDIAN, USE_SELECTED_TECHNIQUE,
+                                CYCLE_TECHNIQUE, OPEN_SYSTEM),
                         Arrays.stream(TECHNIQUE_SLOTS))
                 .toArray(KeyMapping[]::new);
         // Catches the one hazard the stream cannot: a mapping declared below ALL reads as null

@@ -47,9 +47,12 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -489,13 +492,28 @@ public final class MurimCommand {
         ServerPlayer player = context.getSource().getPlayerOrException();
         CultivationService.data(player).setAwakened(true);
 
+        // Lowest tier first, ties broken by id, so the order is defined rather than whatever the
+        // registry happens to yield. It matters because learn() fills the loadout in call order:
+        // an unspecified order meant the first slots could hold arts gated far above the
+        // player's realm, so the most obvious thing to press refused and looked broken.
+        List<Map.Entry<ResourceKey<Technique>, Technique>> ordered =
+                new ArrayList<>(TechniqueService.registry(player).entrySet());
+        ordered.sort(Comparator
+                .comparingInt((Map.Entry<ResourceKey<Technique>, Technique> entry) -> entry.getValue().tier())
+                .thenComparing(entry -> entry.getKey().location().toString()));
+
         int learned = 0;
-        for (var entry : TechniqueService.registry(player).entrySet()) {
+        for (var entry : ordered) {
             if (TechniqueService.learn(player, entry.getKey().location(), entry.getValue())) {
                 learned++;
             }
         }
-        send(context, Component.literal("Learned " + learned + " new technique(s)."));
+
+        CultivationData data = CultivationService.data(player);
+        int unbound = data.techniqueMastery().size() - data.loadout().size();
+        send(context, Component.literal("Learned " + learned + " new technique(s); "
+                + data.loadout().size() + " bound, " + Math.max(0, unbound)
+                + " unbound (bind them in the System window)."));
         return learned;
     }
 

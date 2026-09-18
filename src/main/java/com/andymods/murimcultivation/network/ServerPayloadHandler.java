@@ -90,6 +90,17 @@ public final class ServerPayloadHandler {
         });
     }
 
+    public static void handleUseSelectedTechnique(UseSelectedTechniquePayload payload,
+                                                  IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer player) {
+                // The server reads its own selection rather than trusting a slot number, so
+                // cycling and casting in quick succession cannot fire the previous art.
+                TechniqueService.castSelected(player);
+            }
+        });
+    }
+
     public static void handleCycleTechnique(CycleTechniquePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player)) {

@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.client.screen;
 
 import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.client.KeyBindings;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.network.SetLoadoutPayload;
@@ -66,7 +67,23 @@ public class TechniquesTab implements SystemTab {
 
         graphics.drawString(minecraft.font,
                 Component.translatable("murimcultivation.system.techniques.hint"),
-                area.x(), area.bottom() - 10, SystemTheme.TEXT_DIM, false);
+                area.x(), area.bottom() - 19, SystemTheme.TEXT_DIM, false);
+
+        // The live keys, not the defaults. A player who rebound them — or who never bound the
+        // cast key at all — needs to be told what they actually have, and this is the screen
+        // they are already on when they are wondering why an art does nothing.
+        graphics.drawString(minecraft.font, keyHint(),
+                area.x(), area.bottom() - 10, SystemTheme.TEXT_ACCENT, false);
+    }
+
+    /** How to actually cast, spelled out with whatever keys the player currently has. */
+    private static Component keyHint() {
+        if (KeyBindings.USE_SELECTED_TECHNIQUE.isUnbound()) {
+            return Component.translatable("murimcultivation.system.techniques.keys_unbound");
+        }
+        return Component.translatable("murimcultivation.system.techniques.keys",
+                KeyBindings.keyLabel(KeyBindings.CYCLE_TECHNIQUE),
+                KeyBindings.keyLabel(KeyBindings.USE_SELECTED_TECHNIQUE));
     }
 
     private void renderRow(GuiGraphics graphics, Minecraft minecraft, CultivationData data, Area area,

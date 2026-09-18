@@ -302,7 +302,8 @@ public final class CultivationService {
     /** Pushes the player's full cultivation state to their own client. */
     public static void syncToClient(ServerPlayer player) {
         CultivationData data = data(player);
-        PacketDistributor.sendToPlayer(player, new SyncCultivationPayload(data, data.isMeditating()));
+        PacketDistributor.sendToPlayer(player,
+                new SyncCultivationPayload(data, data.isMeditating(), data.selectedSlot()));
     }
 
     /**

@@ -100,9 +100,11 @@ Sustained arts — Sword Force, Iron Body, Qinggong, Water Walking — run for a
 tracked as transient state, so a crash or a death can never leave you permanently buffed. Iron
 Body charges Qi every tick it is held and collapses when you run dry.
 
-Four techniques can be bound at once. Slot 1 defaults to `R`; slots 2–4 ship unbound so you
-can assign keys that do not clash with your other mods, and `C` cycles the selected slot if
-you would rather use one cast key.
+Four techniques can be bound at once, and you reach all four with two keys: `C` cycles which
+slot is selected, `G` casts it. The loadout bar on the left highlights the selected slot and
+prints the key that will fire it. Each slot also has its own direct shortcut, all four unbound
+by default so the mod does not take four keys from your other mods to duplicate something that
+already works — bind them in Controls if you prefer one key per art.
 
 ## The System window
 
@@ -135,13 +137,13 @@ rewards.
 | `X` | Attempt breakthrough |
 | `M` | Open the next sealed meridian |
 | `K` | Open the System window |
-| `G` | Use technique slot 1 |
-| unbound | Technique slots 2–4 — assign them yourself |
-| `C` | Cycle the selected technique slot |
+| `G` | Cast the selected technique |
+| `C` | Cycle which technique is selected |
+| unbound | Technique slots 1–4 — direct shortcuts, assign them yourself |
 
-Slot 1 sits on `G` rather than the more natural `R` because Essential (essential.gg) puts its
-emote wheel there, and Minecraft fires both mappings on a shared key — you would emote and cast at
-once. Rebind it to `R` in the controls screen if you do not run Essential.
+`G` rather than the more natural `R` because Essential (essential.gg) puts its emote wheel there,
+and Minecraft fires both mappings on a shared key — you would emote and cast at once. Rebind it to
+`R` in the controls screen if you do not run Essential.
 
 ## Extending it with a datapack
 

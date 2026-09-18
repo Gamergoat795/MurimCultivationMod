@@ -35,6 +35,10 @@ public final class ClientPayloadHandler {
             CultivationData local = player.getData(ModAttachments.CULTIVATION);
             local.copyFrom(payload.data());
             local.setMeditating(payload.meditating());
+            // Transient, so it is not in the codec and copyFrom does not carry it. Without this
+            // the client's selection sat at zero forever and the loadout bar's highlight never
+            // moved, which is most of why the cycle key read as doing nothing.
+            local.setSelectedSlot(payload.selectedSlot());
 
             // A full resync means login, respawn or a dimension change. Anything still on screen
             // belongs to a session that no longer exists, and a stale bar would invite an answer
@@ -60,11 +64,12 @@ public final class ClientPayloadHandler {
             local.setPurity(payload.purity());
             local.setMeditating(payload.meditating());
 
-            // Meditation ended, however it ended. Any bar still on screen belongs to a session
-            // that is over and could only invite an answer the server will discard.
-            if (!payload.meditating()) {
-                FocusPromptLayer.clear();
-            }
+            // Deliberately does NOT clear the prompt bar. A breakthrough circulates with
+            // meditation already stopped, and this payload fires about once a second because Qi
+            // regen marks the tick as changed — so clearing here wiped the breakthrough prompt
+            // within a second of it appearing, every time. The bar retires itself once it can no
+            // longer be answered (FocusPromptLayer.LAPSE_GRACE_TICKS) and the server drops an
+            // answer naming a prompt it has already retired, so the clear bought nothing.
         });
     }
 
