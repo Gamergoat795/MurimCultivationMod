@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.cultivation.focus;
 
 import com.andymods.murimcultivation.config.MurimConfig;
+import com.andymods.murimcultivation.cultivation.BreakthroughService;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.network.FocusPromptPayload;
@@ -42,12 +43,15 @@ public final class FocusService {
      * second sweep judged to the nearest second would be unanswerable.
      */
     public static void tick(ServerPlayer player, CultivationData data) {
-        if (!data.isMeditating()) {
+        boolean circulating = data.pendingBreakthrough() != null;
+        if (!data.isMeditating() && !circulating) {
             return;
         }
         // A penalty of zero is the documented way to switch the mechanic off; skip the packets
-        // entirely in that case rather than sending prompts that cannot matter.
-        if (MurimConfig.focusMissPenalty() <= 0.0D) {
+        // entirely in that case rather than sending prompts that cannot matter. A breakthrough
+        // already in flight is still driven to a conclusion, so nobody is left mid-attempt by a
+        // config reload.
+        if (MurimConfig.focusMissPenalty() <= 0.0D && !circulating) {
             return;
         }
 
@@ -60,11 +64,38 @@ public final class FocusService {
         }
     }
 
+    /**
+     * Starts a breakthrough's circulation: the first of several tightening sweeps.
+     *
+     * <p>Phase one of a two-phase attempt. Nothing is spent here — {@code BreakthroughService}
+     * deducts the banked progress only when the sweeps resolve, so walking away mid-circulation
+     * costs nothing.
+     */
+    public static void beginBreakthrough(ServerPlayer player, CultivationData data) {
+        data.setPendingBreakthrough(new PendingBreakthrough(MurimConfig.focusBreakthroughSweeps()));
+        data.setFocusNextPromptTicks(0);
+        data.clearFocusPrompt();
+        player.displayClientMessage(
+                Component.translatable("murimcultivation.focus.circulate_begin"), false);
+        issue(player, data);
+    }
+
     /** Rolls and sends a prompt. */
     private static void issue(ServerPlayer player, CultivationData data) {
         int sweepTicks = Math.max(1, (int) Math.round(MurimConfig.focusSweepSeconds() * TICKS_PER_SECOND));
+        double windowWidth = MurimConfig.focusWindowWidth();
+
+        PendingBreakthrough pending = data.pendingBreakthrough();
+        if (pending != null) {
+            // Each sweep is narrower than the last, so a three-sweep attempt gets harder as it
+            // goes rather than being three rolls of the same die.
+            windowWidth *= Math.max(0.1D,
+                    1.0D - pending.sweepsIssued() * MurimConfig.focusBreakthroughTighten());
+            pending.recordIssued();
+        }
+
         FocusPrompt prompt = FocusPrompt.roll(player.getRandom(), data.nextFocusPromptId(),
-                sweepTicks, MurimConfig.focusWindowWidth());
+                sweepTicks, windowWidth);
 
         // The prompt stays answerable a little past the end of its sweep, so an answer sent on the
         // last tick still arrives in time to be judged rather than racing its own deadline.
@@ -96,6 +127,12 @@ public final class FocusService {
 
     /** Applies a verdict: updates focus, pays any bonus, schedules the next prompt, tells the player. */
     private static void score(ServerPlayer player, CultivationData data, FocusJudge.Verdict verdict) {
+        PendingBreakthrough pending = data.pendingBreakthrough();
+        if (pending != null) {
+            scoreBreakthroughSweep(player, data, pending, verdict);
+            return;
+        }
+
         FocusJudge.Tuning tuning = FocusJudge.Tuning.fromConfig();
         data.setFocus(FocusJudge.applyVerdict(data.focus(), verdict, tuning));
         data.clearFocusPrompt();
@@ -118,6 +155,38 @@ public final class FocusService {
                     SoundEvents.PLAYER_HURT, SoundSource.PLAYERS, 0.3F, 0.6F);
         }
         CultivationService.syncValuesToClient(player);
+    }
+
+    /**
+     * Banks one circulation sweep and either issues the next or resolves the attempt.
+     *
+     * <p>A lapsed sweep counts as a miss and moves on rather than stalling, so a player who walks
+     * away mid-attempt always reaches a conclusion instead of leaving state dangling.
+     */
+    private static void scoreBreakthroughSweep(ServerPlayer player, CultivationData data,
+                                               PendingBreakthrough pending,
+                                               FocusJudge.Verdict verdict) {
+        pending.record(verdict);
+        data.clearFocusPrompt();
+
+        player.displayClientMessage(Component.translatable(
+                verdict.success() ? "murimcultivation.focus.circulate_held"
+                        : "murimcultivation.focus.circulate_slipped",
+                pending.sweepsIssued(), pending.totalSweeps()), true);
+        player.level().playSound(null, player.blockPosition(),
+                verdict.success() ? SoundEvents.AMETHYST_BLOCK_CHIME : SoundEvents.PLAYER_HURT,
+                SoundSource.PLAYERS, 0.6F, verdict.success() ? 1.2F : 0.6F);
+
+        if (pending.hasSweepsLeft()) {
+            issue(player, data);
+            return;
+        }
+
+        // Clear before resolving: BreakthroughService re-checks eligibility and stops meditation,
+        // and neither should see an attempt that is already being decided.
+        double bonus = pending.score() * MurimConfig.focusBreakthroughBonus();
+        data.setPendingBreakthrough(null);
+        BreakthroughService.attempt(player, bonus);
     }
 
     /** Rolls the gap to the next prompt, so the rhythm cannot be anticipated. */

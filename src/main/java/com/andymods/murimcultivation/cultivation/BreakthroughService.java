@@ -158,7 +158,20 @@ public final class BreakthroughService {
      * A cultivator who did all three has meaningfully better odds than one who scraped in.
      */
     public static double successChance(Realm target, CultivationData data, double density, Tuning tuning) {
-        double chance = target.breakthroughBaseChance();
+        return successChance(target, data, density, 0.0D, tuning);
+    }
+
+    /**
+     * As above, plus whatever the player earned circulating their Qi.
+     *
+     * <p>The bonus is added <em>before</em> the clamp, not after, so a flawless circulation still
+     * cannot push a hopeless attempt past {@code maxChance}. It rewards preparation rather than
+     * replacing it — and because {@link #severityForFailedAttempt} keys off the odds that were
+     * actually accepted, playing well also softens the punishment for failing anyway.
+     */
+    public static double successChance(Realm target, CultivationData data, double density,
+                                       double focusBonus, Tuning tuning) {
+        double chance = target.breakthroughBaseChance() + focusBonus;
 
         // Purity above the realm's floor, as a fraction of the headroom that remains.
         double purityHeadroom = CultivationData.MAX_PURITY - target.purityFloor();
@@ -199,6 +212,19 @@ public final class BreakthroughService {
      * lottery ticket you can re-buy until it comes up.
      */
     public static Optional<Result> attempt(ServerPlayer player) {
+        return attempt(player, 0.0D);
+    }
+
+    /**
+     * Resolves an attempt, folding in whatever the circulation sweeps earned.
+     *
+     * <p>This is phase two. {@code FocusService.beginBreakthrough} runs phase one and calls back
+     * here once the sweeps are answered, which is why the progress cost is deducted below rather
+     * than when the player first pressed the key: an attempt abandoned mid-circulation — by a
+     * disconnect, a death, or a respawn — should cost nothing rather than charge for a
+     * breakthrough that never resolved.
+     */
+    public static Optional<Result> attempt(ServerPlayer player, double focusBonus) {
         if (!check(player).isReady()) {
             return Optional.empty();
         }
@@ -212,7 +238,7 @@ public final class BreakthroughService {
         MeditationService.stop(player, MeditationService.Interruption.MANUAL);
 
         Tuning tuning = Tuning.fromConfig();
-        double chance = successChance(target, data, QiDensity.multiplierFor(player), tuning);
+        double chance = successChance(target, data, QiDensity.multiplierFor(player), focusBonus, tuning);
         data.setProgress(data.progress() - current.progressToLeave(data.substage()));
 
         if (player.getRandom().nextDouble() < chance) {

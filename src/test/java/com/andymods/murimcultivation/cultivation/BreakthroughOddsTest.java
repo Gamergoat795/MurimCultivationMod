@@ -166,6 +166,50 @@ class BreakthroughOddsTest {
         assertTrue(result >= TUNING.minChance() && result <= TUNING.maxChance());
     }
 
+    // --- the circulation bonus ---------------------------------------------------------
+
+    @Test
+    void circulatingWellImprovesTheOdds() {
+        Realm realm = target(0.40D);
+        CultivationData data = cultivator(50.0D, 5);
+        double without = BreakthroughService.successChance(realm, data, 1.0D, 0.0D, TUNING);
+        double with = BreakthroughService.successChance(realm, data, 1.0D, 0.15D, TUNING);
+        assertEquals(without + 0.15D, with, 1.0e-9D);
+    }
+
+    @Test
+    void theBonusCannotPushAHopelessAttemptPastTheCeiling() {
+        // The whole reason the bonus is added inside the formula rather than at the call site: a
+        // flawless circulation must reward preparation, not replace it. A realm with a 0.94 base
+        // chance plus a full bonus still lands on the 0.95 ceiling, not above it.
+        double result = BreakthroughService.successChance(
+                target(0.94D), cultivator(100.0D, 20), 3.0D, 1.0D, TUNING);
+        assertEquals(TUNING.maxChance(), result, 1.0e-9D);
+    }
+
+    @Test
+    void aBotchedCirculationLeavesTheOddsExactlyAsTheyWere() {
+        // Scoring zero must be identical to the old single-phase behaviour, so a player who
+        // ignores the sweeps is no worse off than before the mechanic existed.
+        Realm realm = target(0.55D);
+        CultivationData data = cultivator(70.0D, 8);
+        assertEquals(BreakthroughService.successChance(realm, data, 1.2D, TUNING),
+                BreakthroughService.successChance(realm, data, 1.2D, 0.0D, TUNING), 1.0e-9D);
+    }
+
+    @Test
+    void theDisplayedOddsAreTheUnbonusedOnes() {
+        // successChanceForNextRealm feeds the System window and /murim chance, and is read before
+        // any circulation has happened — so it must not promise a bonus the player has not earned.
+        // The four-argument overload is what that path uses, and it passes zero.
+        Realm realm = target(0.50D);
+        CultivationData data = cultivator(60.0D, 6);
+        double displayed = BreakthroughService.successChance(realm, data, 1.0D, TUNING);
+        double earned = BreakthroughService.successChance(realm, data, 1.0D, 0.15D, TUNING);
+        assertTrue(earned > displayed,
+                "the bonus must be invisible to the display path but real at resolution");
+    }
+
     @Test
     void failingAWellPreparedAttemptIsGentlerThanFailingAGamble() {
         assertEquals(DeviationSeverity.MINOR_BLOCKAGE,

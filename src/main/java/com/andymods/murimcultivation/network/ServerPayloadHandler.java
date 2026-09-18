@@ -46,6 +46,17 @@ public final class ServerPayloadHandler {
                 return;
             }
 
+            CultivationData data = CultivationService.data(player);
+
+            // Pressing the key again mid-circulation must not start a second attempt. The progress
+            // is not deducted until the sweeps resolve, so without this guard the eligibility check
+            // still passes and the attempts would stack.
+            if (data.pendingBreakthrough() != null) {
+                player.displayClientMessage(
+                        Component.translatable("murimcultivation.focus.already_circulating"), true);
+                return;
+            }
+
             BreakthroughService.Eligibility eligibility = BreakthroughService.check(player);
             if (!eligibility.isReady()) {
                 player.displayClientMessage(eligibility.message(), true);
@@ -53,8 +64,10 @@ public final class ServerPayloadHandler {
             }
 
             // Breaking through breaks concentration either way.
-            CultivationService.data(player).setMeditating(false);
-            BreakthroughService.attempt(player);
+            data.setMeditating(false);
+            // Phase one: circulate the Qi. FocusService calls BreakthroughService.attempt once the
+            // sweeps are answered, which is also when the banked progress is finally spent.
+            FocusService.beginBreakthrough(player, data);
         });
     }
 

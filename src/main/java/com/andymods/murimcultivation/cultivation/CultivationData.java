@@ -2,6 +2,7 @@ package com.andymods.murimcultivation.cultivation;
 
 import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.cultivation.focus.FocusPrompt;
+import com.andymods.murimcultivation.cultivation.focus.PendingBreakthrough;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceKey;
@@ -76,6 +77,7 @@ public class CultivationData {
     private int focusPromptElapsedTicks;
     private int focusNextPromptTicks;
     private int focusPromptSequence;
+    private PendingBreakthrough pendingBreakthrough;
 
     public static final Codec<CultivationData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceKey.codec(MurimRegistries.REALM).optionalFieldOf("realm").forGetter(CultivationData::realmKey),
@@ -636,12 +638,28 @@ public class CultivationData {
         return --focusPromptRemainingTicks <= 0;
     }
 
-    /** Drops focus state back to a fresh session. */
+    /** Drops focus state back to a fresh session, abandoning any attempt in flight. */
     public void resetFocus() {
         focus = FULL_FOCUS;
         focusNextPromptTicks = 0;
         focusPromptSequence = 0;
+        pendingBreakthrough = null;
         clearFocusPrompt();
+    }
+
+    /**
+     * The breakthrough attempt waiting on its circulation sweeps, or {@code null}.
+     *
+     * <p>Transient, which is what makes abandoning one free: the progress is not spent until the
+     * attempt resolves, so a disconnect or a death mid-sweep costs nothing rather than charging
+     * for a breakthrough that never happened.
+     */
+    public PendingBreakthrough pendingBreakthrough() {
+        return pendingBreakthrough;
+    }
+
+    public void setPendingBreakthrough(PendingBreakthrough pending) {
+        this.pendingBreakthrough = pending;
     }
 
     // --- Bulk copy --------------------------------------------------------------------

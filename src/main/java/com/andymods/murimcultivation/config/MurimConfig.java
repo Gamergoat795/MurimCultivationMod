@@ -38,6 +38,9 @@ public final class MurimConfig {
         private final ModConfigSpec.DoubleValue focusHitGain;
         private final ModConfigSpec.DoubleValue focusMissPenalty;
         private final ModConfigSpec.DoubleValue focusPerfectBonusSeconds;
+        private final ModConfigSpec.IntValue focusBreakthroughSweeps;
+        private final ModConfigSpec.DoubleValue focusBreakthroughTighten;
+        private final ModConfigSpec.DoubleValue focusBreakthroughBonus;
         private final ModConfigSpec.DoubleValue qiDensityRichBiome;
         private final ModConfigSpec.DoubleValue qiDensityBarrenBiome;
         private final ModConfigSpec.DoubleValue qiDensityNight;
@@ -169,6 +172,24 @@ public final class MurimConfig {
                     .comment("A perfect answer is worth this many extra seconds of meditation,",
                             "so attention is rewarded rather than merely not punished.")
                     .defineInRange("perfectBonusSeconds", 4.0D, 0.0D, 1000.0D);
+
+            focusBreakthroughSweeps = builder
+                    .comment("How many circulation sweeps a breakthrough asks for. Each is tighter",
+                            "than the last. Set to 1 for a single window.")
+                    .defineInRange("breakthroughSweeps", 3, 1, 10);
+
+            focusBreakthroughTighten = builder
+                    .comment("How much narrower each successive breakthrough sweep is, as a",
+                            "fraction of the base window width. At the default, a three-sweep",
+                            "attempt runs 100%, 75% then 50% of the normal window.")
+                    .defineInRange("breakthroughTighten", 0.25D, 0.0D, 0.9D);
+
+            focusBreakthroughBonus = builder
+                    .comment("How much a flawless circulation adds to breakthrough odds. Still",
+                            "bounded by the breakthrough minChance and maxChance clamps, so this",
+                            "cannot make a hopeless attempt safe — it rewards preparation rather",
+                            "than replacing it.")
+                    .defineInRange("breakthroughBonus", 0.15D, 0.0D, 1.0D);
 
             builder.pop();
             builder.comment("Ambient Qi density: where you cultivate matters").push("qi_density");
@@ -448,6 +469,18 @@ public final class MurimConfig {
 
     public static double focusPerfectBonusSeconds() {
         return VALUES.focusPerfectBonusSeconds.get();
+    }
+
+    public static int focusBreakthroughSweeps() {
+        return VALUES.focusBreakthroughSweeps.get();
+    }
+
+    public static double focusBreakthroughTighten() {
+        return VALUES.focusBreakthroughTighten.get();
+    }
+
+    public static double focusBreakthroughBonus() {
+        return VALUES.focusBreakthroughBonus.get();
     }
 
     public static double qiPerPrimaryMeridian() {
