@@ -5,6 +5,8 @@ import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.registry.ModItems;
 import com.andymods.murimcultivation.sect.Sect;
+import com.andymods.murimcultivation.standing.MurimStanding;
+import com.andymods.murimcultivation.standing.StandingService;
 import com.andymods.murimcultivation.sect.SectRank;
 import com.andymods.murimcultivation.sect.SectService;
 import com.andymods.murimcultivation.technique.Technique;
@@ -195,6 +197,15 @@ public final class MurimCommand {
 
         root.then(Commands.literal("cure").executes(MurimCommand::cureDeviation));
 
+        root.then(Commands.literal("standing")
+                .then(Commands.literal("honour")
+                        .then(Commands.argument("amount", IntegerArgumentType.integer(-100, 100))
+                                .executes(context -> moveStanding(context, true))))
+                .then(Commands.literal("infamy")
+                        .then(Commands.argument("amount", IntegerArgumentType.integer(-100, 100))
+                                .executes(context -> moveStanding(context, false))))
+                .executes(MurimCommand::showStanding));
+
         root.then(Commands.literal("sect")
                 .then(Commands.literal("list").executes(MurimCommand::listSects))
                 .then(Commands.literal("join")
@@ -241,6 +252,8 @@ public final class MurimCommand {
                 + data.systemProgress().allocations()));
         send(context, Component.literal("Titles: " + data.systemProgress().titles().size()
                 + ", worn: " + data.systemProgress().equippedTitle().map(Object::toString).orElse("none")));
+        send(context, Component.literal("Standing: honour " + data.standing().honour()
+                + ", infamy " + data.standing().infamy()));
         send(context, Component.literal("Sects: " + data.sectReputation().entrySet().stream()
                 .filter(entry -> entry.getValue() > 0)
                 .map(entry -> entry.getKey().getPath() + " "
@@ -640,6 +653,31 @@ public final class MurimCommand {
         return refunded;
     }
 
+    private static int showStanding(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        MurimStanding standing = CultivationService.data(player).standing();
+        send(context, Component.literal("--- Standing ---"));
+        send(context, Component.literal("  honour " + standing.honour() + "/" + MurimStanding.MAX));
+        send(context, Component.literal("  infamy " + standing.infamy() + "/" + MurimStanding.MAX));
+        return 1;
+    }
+
+    private static int moveStanding(CommandContext<CommandSourceStack> context, boolean honour)
+            throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        int amount = IntegerArgumentType.getInteger(context, "amount");
+        MurimStanding standing = CultivationService.data(player).standing();
+
+        // Report what was actually applied rather than what was asked for: both values clamp, and
+        // a command that silently swallowed the difference would make the bounds invisible.
+        int applied = honour ? standing.addHonour(amount) : standing.addInfamy(amount);
+        CultivationService.syncToClient(player);
+        send(context, Component.literal((honour ? "Honour " : "Infamy ")
+                + (applied >= 0 ? "+" : "") + applied
+                + " -> " + (honour ? standing.honour() : standing.infamy())));
+        return 1;
+    }
+
     private static int listSects(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         CultivationData data = CultivationService.data(player);
@@ -652,9 +690,15 @@ public final class MurimCommand {
             SectRank rank = SectRank.forReputation(reputation);
             SectRank next = rank.next();
             String toNext = next == null ? "" : " (next at " + next.reputationRequired() + ")";
-            send(context, Component.literal(String.format(Locale.ROOT, "  %s [%s]  rep %s, %s%s",
+            // Report the standing verdict rather than enforcing it: honour is not earnable in
+            // play until duels land, and refusing a sect for a number nothing can move yet would
+            // be a regression dressed as a feature.
+            StandingService.Verdict verdict =
+                    StandingService.judge(sect.alignment(), data.standing(), StandingService.Tuning.fromConfig());
+            send(context, Component.literal(String.format(Locale.ROOT, "  %s [%s]  rep %s, %s%s  standing: %s",
                     id, sect.alignment().getSerializedName(), reputation,
-                    rank.getSerializedName(), toNext)));
+                    rank.getSerializedName(), toNext,
+                    verdict.name().toLowerCase(Locale.ROOT))));
         }
         return 1;
     }

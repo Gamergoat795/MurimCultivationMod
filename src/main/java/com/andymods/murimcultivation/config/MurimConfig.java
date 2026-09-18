@@ -79,6 +79,15 @@ public final class MurimConfig {
         private final ModConfigSpec.IntValue statPointsPerSubstage;
         private final ModConfigSpec.IntValue statPointsPerRealm;
         private final ModConfigSpec.IntValue dailyResetIntervalDays;
+        private final ModConfigSpec.IntValue standingHonourPerHonourableWin;
+        private final ModConfigSpec.IntValue standingInfamyForgivenPerWin;
+        private final ModConfigSpec.IntValue standingInfamyPerAmbush;
+        private final ModConfigSpec.IntValue standingHonourLostPerAmbush;
+        private final ModConfigSpec.IntValue standingInfamyPerKillingYielded;
+        private final ModConfigSpec.IntValue standingHonourLostPerKillingYielded;
+        private final ModConfigSpec.IntValue standingOrthodoxHonourRequired;
+        private final ModConfigSpec.IntValue standingOrthodoxInfamyLimit;
+        private final ModConfigSpec.IntValue standingDemonicInfamyRequired;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -399,6 +408,63 @@ public final class MurimConfig {
                     .defineInRange("dailyResetIntervalDays", 1, 1, 1000);
 
             builder.pop();
+            builder.comment("Standing in the murim: honour and infamy, both 0-100.",
+                            "These move by how you fight rather than whether you win. Losing a duel",
+                            "you challenged for honestly costs nothing at all, by design — honour",
+                            "tracks conduct, and a system where it tracked outcome would just be a",
+                            "second name for combat power.",
+                            "A server that wants none of this can set every amount below to 0, which",
+                            "pins both values where they start and leaves sect joining as it was.")
+                    .push("standing");
+
+            standingHonourPerHonourableWin = builder
+                    .comment("Honour for winning a duel you challenged for. At the default it takes",
+                            "five clean wins to reach the orthodox threshold, which is meant to be a",
+                            "few evenings rather than a grind.")
+                    .defineInRange("honourPerHonourableWin", 4, 0, 100);
+
+            standingInfamyForgivenPerWin = builder
+                    .comment("Infamy shed by the same win. Infamy never decays on a timer, so this is",
+                            "the only way back: redemption is something you do rather than something",
+                            "you wait out. Set to 0 to make a reputation for cruelty permanent.")
+                    .defineInRange("infamyForgivenPerWin", 1, 0, 100);
+
+            standingInfamyPerAmbush = builder
+                    .comment("Infamy for striking someone who was not fighting you.")
+                    .defineInRange("infamyPerAmbush", 6, 0, 100);
+
+            standingHonourLostPerAmbush = builder
+                    .comment("Honour lost for the same. Larger than the infamy gain is not required;",
+                            "these are separate axes and may move by different amounts.")
+                    .defineInRange("honourLostPerAmbush", 3, 0, 100);
+
+            standingInfamyPerKillingYielded = builder
+                    .comment("Infamy for killing an opponent who had already yielded. Deliberately the",
+                            "largest number here: sparing someone only means something because",
+                            "refusing to is available and costly.")
+                    .defineInRange("infamyPerKillingYielded", 12, 0, 100);
+
+            standingHonourLostPerKillingYielded = builder
+                    .comment("Honour lost for killing the yielded.")
+                    .defineInRange("honourLostPerKillingYielded", 10, 0, 100);
+
+            standingOrthodoxHonourRequired = builder
+                    .comment("Honour an orthodox sect wants before it will take you.")
+                    .defineInRange("orthodoxHonourRequired", 20, 0, 100);
+
+            standingOrthodoxInfamyLimit = builder
+                    .comment("Infamy above which an orthodox sect refuses you whatever your honour.",
+                            "The two halves are not the same test: honour is what they want, infamy is",
+                            "what they will not be seen with, and someone can be both respected and",
+                            "too dangerous to associate with.")
+                    .defineInRange("orthodoxInfamyLimit", 25, 0, 100);
+
+            standingDemonicInfamyRequired = builder
+                    .comment("Infamy a demonic sect wants before it takes you seriously. They have no",
+                            "use for someone nobody fears.")
+                    .defineInRange("demonicInfamyRequired", 20, 0, 100);
+
+            builder.pop();
             builder.comment("Performance and presentation").push("general");
 
             cultivationTickInterval = builder
@@ -645,6 +711,42 @@ public final class MurimConfig {
 
     public static int dailyResetIntervalDays() {
         return VALUES.dailyResetIntervalDays.get();
+    }
+
+    public static int standingHonourPerHonourableWin() {
+        return VALUES.standingHonourPerHonourableWin.get();
+    }
+
+    public static int standingInfamyForgivenPerWin() {
+        return VALUES.standingInfamyForgivenPerWin.get();
+    }
+
+    public static int standingInfamyPerAmbush() {
+        return VALUES.standingInfamyPerAmbush.get();
+    }
+
+    public static int standingHonourLostPerAmbush() {
+        return VALUES.standingHonourLostPerAmbush.get();
+    }
+
+    public static int standingInfamyPerKillingYielded() {
+        return VALUES.standingInfamyPerKillingYielded.get();
+    }
+
+    public static int standingHonourLostPerKillingYielded() {
+        return VALUES.standingHonourLostPerKillingYielded.get();
+    }
+
+    public static int standingOrthodoxHonourRequired() {
+        return VALUES.standingOrthodoxHonourRequired.get();
+    }
+
+    public static int standingOrthodoxInfamyLimit() {
+        return VALUES.standingOrthodoxInfamyLimit.get();
+    }
+
+    public static int standingDemonicInfamyRequired() {
+        return VALUES.standingDemonicInfamyRequired.get();
     }
 
     public static int cultivationTickInterval() {

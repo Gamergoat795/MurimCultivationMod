@@ -3,6 +3,7 @@ package com.andymods.murimcultivation.cultivation;
 import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.cultivation.focus.FocusPrompt;
 import com.andymods.murimcultivation.cultivation.focus.PendingBreakthrough;
+import com.andymods.murimcultivation.standing.MurimStanding;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceKey;
@@ -60,7 +61,7 @@ public class CultivationData {
     private final List<ResourceLocation> loadout;
     private final SystemProgress systemProgress;
     private final QuestLog questLog;
-    private final Map<ResourceLocation, Integer> sectReputation;
+    private final MurimStanding standing;
     private DeviationSeverity deviation;
     private int deviationTicks;
 
@@ -96,8 +97,8 @@ public class CultivationData {
             SystemProgress.CODEC.optionalFieldOf("system_progress", new SystemProgress())
                     .forGetter(CultivationData::systemProgress),
             QuestLog.CODEC.optionalFieldOf("quest_log", new QuestLog()).forGetter(CultivationData::questLog),
-            Codec.unboundedMap(ResourceLocation.CODEC, Codec.INT).optionalFieldOf("sect_reputation", Map.of())
-                    .forGetter(data -> Map.copyOf(data.sectReputation)),
+            MurimStanding.CODEC.optionalFieldOf("murim_standing", new MurimStanding())
+                    .forGetter(CultivationData::standing),
             DeviationSeverity.CODEC.optionalFieldOf("deviation", DeviationSeverity.NONE)
                     .forGetter(CultivationData::deviation),
             Codec.INT.optionalFieldOf("deviation_ticks", 0).forGetter(CultivationData::deviationTicks)
@@ -107,7 +108,7 @@ public class CultivationData {
     public CultivationData() {
         this(Optional.empty(), Substage.EARLY, 0.0D, 0.0D, DEFAULT_PURITY, false,
                 List.of(), Map.of(), List.of(), new SystemProgress(), new QuestLog(),
-                Map.of(), DeviationSeverity.NONE, 0);
+                new MurimStanding(), DeviationSeverity.NONE, 0);
     }
 
     public CultivationData(Optional<ResourceKey<Realm>> realm,
@@ -121,7 +122,7 @@ public class CultivationData {
                            List<ResourceLocation> loadout,
                            SystemProgress systemProgress,
                            QuestLog questLog,
-                           Map<ResourceLocation, Integer> sectReputation,
+                           MurimStanding standing,
                            DeviationSeverity deviation,
                            int deviationTicks) {
         this.realm = realm;
@@ -135,7 +136,7 @@ public class CultivationData {
         this.loadout = new ArrayList<>(loadout);
         this.systemProgress = systemProgress;
         this.questLog = questLog;
-        this.sectReputation = new HashMap<>(sectReputation);
+        this.standing = standing;
         this.deviation = deviation;
         this.deviationTicks = Math.max(0, deviationTicks);
     }
@@ -482,18 +483,29 @@ public class CultivationData {
         return questLog;
     }
 
-    // --- Sects (populated in M5) ------------------------------------------------------
+    // --- Standing in the murim: sects, honour, infamy ---------------------------------
+
+    /**
+     * How the murim sees this cultivator.
+     *
+     * <p>Held as one nested object so the codec spends one field on three values rather than
+     * three. The sect accessors below delegate to it, which is why folding {@code sectReputation}
+     * in here changed no caller anywhere.
+     */
+    public MurimStanding standing() {
+        return standing;
+    }
 
     public int sectReputation(ResourceLocation sect) {
-        return sectReputation.getOrDefault(sect, 0);
+        return standing.sectReputation(sect);
     }
 
     public void addSectReputation(ResourceLocation sect, int amount) {
-        sectReputation.merge(sect, amount, Integer::sum);
+        standing.addSectReputation(sect, amount);
     }
 
     public Map<ResourceLocation, Integer> sectReputation() {
-        return Collections.unmodifiableMap(sectReputation);
+        return standing.sectReputation();
     }
 
     // --- Qi deviation -----------------------------------------------------------------
@@ -692,8 +704,7 @@ public class CultivationData {
         this.loadout.addAll(source.loadout);
         this.systemProgress.copyFrom(source.systemProgress);
         this.questLog.copyFrom(source.questLog);
-        this.sectReputation.clear();
-        this.sectReputation.putAll(source.sectReputation);
+        this.standing.copyFrom(source.standing);
         this.deviation = source.deviation;
         this.deviationTicks = source.deviationTicks;
     }

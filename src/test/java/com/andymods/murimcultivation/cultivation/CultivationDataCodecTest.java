@@ -62,6 +62,8 @@ class CultivationDataCodecTest {
                 ResourceLocation.fromNamespaceAndPath("murimcultivation", "first_breath"),
                 QuestCategory.STORY);
         data.addSectReputation(ResourceLocation.fromNamespaceAndPath("murimcultivation", "murim_alliance"), 250);
+        data.standing().setHonour(37);
+        data.standing().setInfamy(9);
         data.applyDeviation(DeviationSeverity.REVERSE_FLOW);
         return data;
     }
@@ -94,6 +96,8 @@ class CultivationDataCodecTest {
         assertEquals(original.questLog().completed(), restored.questLog().completed());
         assertEquals(original.questLog().lastDailyResetDay(), restored.questLog().lastDailyResetDay());
         assertEquals(original.sectReputation(), restored.sectReputation());
+        assertEquals(original.standing().honour(), restored.standing().honour());
+        assertEquals(original.standing().infamy(), restored.standing().infamy());
         assertEquals(original.deviation(), restored.deviation());
         assertEquals(original.deviationTicks(), restored.deviationTicks());
     }
@@ -188,6 +192,11 @@ class CultivationDataCodecTest {
         assertEquals(source.openMeridians(), target.openMeridians());
         assertEquals(source.progress(), target.progress(), 1.0e-9D);
         assertEquals(source.deviation(), target.deviation());
+        // Standing is persistent and nested, so it has to be copied into rather than replaced —
+        // the parent holds it in a final field.
+        assertEquals(source.standing().honour(), target.standing().honour());
+        assertEquals(source.standing().infamy(), target.standing().infamy());
+        assertEquals(source.sectReputation(), target.sectReputation());
         assertFalse(target.isMeditating(), "copyFrom must not carry meditation across a respawn");
     }
 
