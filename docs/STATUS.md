@@ -109,6 +109,30 @@ actually honour.
 `latencyTolerance` is the one I would expect to be wrong first. It is the line between "laggy but
 honest" and "rejected", and I had no real players to calibrate it against.
 
+### The new sections, same place in the file
+
+`[standing]`, `[warriors]` and the duel keys inside `[warriors]` are all in that same per-world
+`serverconfig` file. The ones most likely to be wrong:
+
+| Setting | Default | What it decides |
+|---|---|---|
+| `warriors.naturalSpawns` | `true` | **Set to `false` to keep warriors out of worldgen entirely.** The spawn egg still works |
+| `warriors.neutralPressure` | 20 | Danger floor in an ordinary biome. Raise it and the world gets harder everywhere |
+| `warriors.maxNaturalRealmTier` | 5 | Highest realm a wild warrior may roll. 5 is Transcendent |
+| `warriors.maxRealmGap` | 2 | How far apart two cultivators may be and still duel. Lower it and challenges get refused more |
+| `warriors.yieldHealthFraction` | 0.2 | When a duellist yields. This is what makes losing survivable, so do not set it near zero |
+| `warriors.sectChance` | 35 | Percentage of warriors carrying a sect allegiance |
+| `standing.honourPerHonourableWin` | 4 | Five clean wins reaches the orthodox threshold |
+| `standing.orthodoxHonourRequired` | 20 | Honour an orthodox sect wants |
+| `standing.demonicInfamyRequired` | 20 | Infamy a demonic sect wants. Four ambushes reaches it |
+
+**How often** warriors spawn is a datapack weight rather than a config value, in
+`data/murimcultivation/neoforge/biome_modifier/wandering_warriors.json` — a biome modifier cannot
+read config. It ships at weight 6, which is low; raise it if the roads feel empty.
+
+Every amount in `[standing]` can be set to 0 to disable honour and infamy entirely, which leaves
+sect joining behaving exactly as it did before this pass. A test asserts that.
+
 ## 3. Two clients, once.
 
 Two things can only be checked with two players connected at once, and both are the kind of bug
@@ -131,7 +155,20 @@ trace for the cauldron proportions.
 
 # Approve — needs a decision from you
 
-## 1. The four server-readiness fixes
+## 1. Bounty hunters and sect patrols — the other half of the mob pass
+
+Wandering warriors, duels and honour are built. The two mob types that hang off infamy are not:
+
+- **Bounty hunters** that spawn to come after you once your infamy is high. Right now infamy gates
+  which sects will take you and makes wanderers attack rather than parley, which is real but
+  passive — nothing yet comes looking.
+- **Sect patrols**, groups hostile to the opposing alignment, which is what would make an
+  allegiance cost something rather than only unlocking teachers.
+
+Deliberately held back so the duel mechanic gets playtested before two more mob types are built on
+top of it. If duels feel wrong, I would rather change them now than in three places.
+
+## 2. The four server-readiness fixes
 
 Planned in full, not built. I have just re-verified all four are still outstanding. **One is a
 real bug**, not a cleanup:
@@ -150,7 +187,7 @@ real bug**, not a cleanup:
 
 Say the word and I'll do all four.
 
-## 2. M7 — models and animations
+## 3. M7 — models and animations
 
 Planned in full. Needs your go-ahead, and it is the only thing in this list that **costs your
 players something**: two mods they must install (Player Animation Library, and Zigy's Player
@@ -169,13 +206,13 @@ nine animations authored in Blockbench**. I can build the loading, triggering an
 author animation, because hand-writing keyframes without a preview produces motion that is
 technically valid and looks wrong.
 
-## 3. M6 — polish
+## 4. M6 — polish
 
 Never started, and the only milestone with no plan written yet. Contents as sketched: advancements
 mirroring the realm ladder, datagen for models and tags, a balance pass, and documentation for
 datapack authors.
 
-## 4. The balance pass, specifically
+## 5. The balance pass, specifically
 
 Worth separating from the rest of M6 because it is the one that decides whether the mod is fun.
 The stated target — First-Rate in roughly two to three hours — has **never been measured**. Nobody
@@ -193,17 +230,21 @@ Not decisions, just things that do not exist yet:
 - No advancements.
 - No documentation for datapack authors, despite every realm, technique, quest, title, sect and
   pill formula being datapack-driven and designed for exactly that.
-- No NPC entity texture (only needed if M7a happens).
+- No NPC entity texture. Both mobs render on vanilla player skins — the teacher as Steve, a
+  wandering warrior as Alex — so they are told apart by their names rather than by looking
+  different. Only fixed by M7a.
 - `isNearVein` in `QiSources` is dead public API with zero callers.
+- Nothing distinguishes a Thug from a Master visually. The name states the tier and realm, which
+  works, but you have to look at one to know whether to run.
 
 ---
 
 # How to check any of this yourself
 
 ```
-python3 tools/verify_sources.py          # structure, JSON, translation keys, datapack
-                                         # consistency, texture dimensions, missing art
-./gradlew build                          # compile + 188 tests (this is what CI runs)
+python3 tools/verify_sources.py          # structure, unresolved type names, JSON, translation
+                                         # keys, datapack consistency, texture dimensions, art
+./gradlew build                          # compile + 245 tests (this is what CI runs)
 ./gradlew runServer                      # the gate CI cannot provide
 ./gradlew runClient                      # the only way to know how any of it feels
 ```
