@@ -285,5 +285,8 @@
   "murimcultivation.npc.nothing_left": "I have nothing left to teach you.",
   "murimcultivation.npc.rise_further": "Rise to %s and return to me.",
   "murimcultivation.npc.unknown_art": "The art I would teach has been lost.",
-  "murimcultivation.npc.taught": "Then learn this: %s."
+  "murimcultivation.npc.taught": "Then learn this: %s.",
+  "murimcultivation.npc.spar.begin": "Very well. Show me what you have learned.",
+  "murimcultivation.npc.spar.yield": "Enough! I yield. Well fought.",
+  "murimcultivation.npc.spar.victory": "Enough. You are beaten; train harder and come back."
 }

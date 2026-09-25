@@ -66,6 +66,7 @@ public final class MurimConfig {
         private final ModConfigSpec.IntValue statPointsPerSubstage;
         private final ModConfigSpec.IntValue statPointsPerRealm;
         private final ModConfigSpec.IntValue dailyResetIntervalDays;
+        private final ModConfigSpec.DoubleValue npcCooldownMultiplier;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -307,6 +308,15 @@ public final class MurimConfig {
                     .defineInRange("dailyResetIntervalDays", 1, 1, 1000);
 
             builder.pop();
+            builder.comment("Sects and their martial artists").push("sects");
+
+            npcCooldownMultiplier = builder
+                    .comment("Multiplier on a technique's cooldown when a martial artist casts it.",
+                            "NPCs have no Qi pool, so cooldowns are their only limiter; above 1",
+                            "keeps an artist from casting as often as a player could.")
+                    .defineInRange("npcCooldownMultiplier", 2.0D, 0.1D, 100.0D);
+
+            builder.pop();
             builder.comment("Performance and presentation").push("general");
 
             cultivationTickInterval = builder
@@ -501,6 +511,10 @@ public final class MurimConfig {
 
     public static int dailyResetIntervalDays() {
         return VALUES.dailyResetIntervalDays.get();
+    }
+
+    public static double npcCooldownMultiplier() {
+        return VALUES.npcCooldownMultiplier.get();
     }
 
     public static int cultivationTickInterval() {

@@ -64,6 +64,20 @@ public final class SectService {
         return SectRank.forReputation(CultivationService.data(player).sectReputation(sect));
     }
 
+    /**
+     * Whether a player has sworn to a side that opposes this sect — a member of any sect whose
+     * alignment opposes it. A player with no sect, or only neutral ones, is nobody's enemy.
+     */
+    public static boolean isEnemyOf(Player player, Sect sect) {
+        for (var entry : registry(player).entrySet()) {
+            if (sect.alignment().opposes(entry.getValue().alignment())
+                    && isMemberOf(player, entry.getKey().location())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Every sect the player has any standing with at all. */
     public static boolean isMemberOf(Player player, ResourceLocation sect) {
         return rankIn(player, sect).isMember();

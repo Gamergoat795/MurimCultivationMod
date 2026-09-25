@@ -35,10 +35,14 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -47,8 +51,11 @@ import net.minecraft.world.item.component.DyedItemColor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * A martial artist of some sect.
@@ -86,13 +93,134 @@ public class MartialArtistEntity extends PathfinderMob {
                 .add(Attributes.FOLLOW_RANGE, 24.0D);
     }
 
+    /**
+     * When each art comes off cooldown, by game time. Deliberately not saved: a reload resetting
+     * an NPC's cooldowns is harmless, and persisting them would be state with no payoff.
+     */
+    private final Map<ResourceLocation, Long> artReadyAt = new HashMap<>();
+
+    /** The player this artist is sparring with, if any, and when they last traded blows. */
+    private UUID sparPartner;
+    private long lastExchange;
+
     @Override
     protected void registerGoals() {
-        // Enough to look alive and not drown. Combat behaviour is a later milestone's job.
         goalSelector.addGoal(0, new FloatGoal(this));
+        goalSelector.addGoal(1, new CastTechniqueGoal(this));
+        goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.1D, false));
         goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.6D));
         goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+
+        // Anyone who strikes first gets an answer — a spar, if they are not an enemy.
+        targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        // Sworn enemies are attacked on sight: players of an opposing sect, and opposing artists.
+        targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(
+                this, Player.class, 10, true, false, this::isEnemy));
+        targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(
+                this, MartialArtistEntity.class, 10, true, false, this::isEnemy));
+    }
+
+    /** This artist's sect, if the loaded datapacks still define it. */
+    public Optional<Sect> sect() {
+        return level().registryAccess().registryOrThrow(MurimRegistries.SECT).getOptional(sect);
+    }
+
+    /**
+     * Whether this artist treats someone as a sworn enemy: an artist of an opposing alignment,
+     * or a player who has joined a sect of one. Players with no allegiance are left in peace.
+     */
+    public boolean isEnemy(LivingEntity other) {
+        Optional<Sect> own = sect();
+        if (own.isEmpty()) {
+            return false;
+        }
+        if (other instanceof MartialArtistEntity artist) {
+            return artist.sect().map(theirs -> own.get().alignment().opposes(theirs.alignment()))
+                    .orElse(false);
+        }
+        return other instanceof Player player && SectService.isEnemyOf(player, own.get());
+    }
+
+    /**
+     * A player who is not an enemy may only be fought inside a spar. This is what ends a spar
+     * cleanly: vanilla target goals keep re-acquiring their target while {@code canAttack}
+     * allows it, so clearing the target alone would not stop the fight.
+     */
+    @Override
+    public boolean canAttack(LivingEntity target) {
+        if (target instanceof Player && !isSparringWith(target) && !isEnemy(target)) {
+            return false;
+        }
+        return super.canAttack(target);
+    }
+
+    boolean isArtReady(ResourceLocation id, long now) {
+        return artReadyAt.getOrDefault(id, 0L) <= now;
+    }
+
+    void startArtCooldown(ResourceLocation id, long readyAt) {
+        artReadyAt.put(id, readyAt);
+    }
+
+    // --- Sparring ---------------------------------------------------------------------
+
+    public boolean isSparringWith(LivingEntity other) {
+        return sparPartner != null && sparPartner.equals(other.getUUID());
+    }
+
+    /**
+     * Called when a player lands a blow. A friendly artist answers the first one by accepting a
+     * spar; within a spar, each blow keeps it alive. An enemy's blow starts nothing — that is
+     * simply a fight.
+     */
+    public void onStruckBy(ServerPlayer player) {
+        if (isSparringWith(player)) {
+            lastExchange = level().getGameTime();
+            return;
+        }
+        if (sparPartner == null && !isEnemy(player)) {
+            sparPartner = player.getUUID();
+            lastExchange = level().getGameTime();
+            say(player, "murimcultivation.npc.spar.begin");
+        }
+    }
+
+    /** Called when the partner lands a blow on this artist's opponent, i.e. the artist hits. */
+    public void onLandedBlow() {
+        lastExchange = level().getGameTime();
+    }
+
+    /** The player has beaten this artist in a spar. */
+    public void yieldTo(ServerPlayer player) {
+        say(player, "murimcultivation.npc.spar.yield");
+        endSpar();
+        setHealth(getMaxHealth());
+    }
+
+    /** This artist has beaten the player in a spar. */
+    public void acceptYieldFrom(ServerPlayer player) {
+        say(player, "murimcultivation.npc.spar.victory");
+        endSpar();
+    }
+
+    private void endSpar() {
+        sparPartner = null;
+        setTarget(null);
+        setLastHurtByMob(null);
+    }
+
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        if (sparPartner == null || tickCount % 20 != 0) {
+            return;
+        }
+        Player partner = level().getPlayerByUUID(sparPartner);
+        if (partner == null || !partner.isAlive()
+                || Sparring.abandoned(level().getGameTime(), lastExchange, distanceToSqr(partner))) {
+            endSpar();
+        }
     }
 
     public ResourceLocation sectId() {

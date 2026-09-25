@@ -3,7 +3,7 @@ package com.andymods.murimcultivation.technique;
 import com.mojang.serialization.Codec;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -37,9 +37,9 @@ public enum HandRequirement implements StringRepresentable {
         this.id = id;
     }
 
-    /** Whether the player's current grip satisfies this requirement. */
-    public boolean isSatisfiedBy(Player player) {
-        ItemStack held = player.getMainHandItem();
+    /** Whether a caster's current grip — a player's or a martial artist's — satisfies this. */
+    public boolean isSatisfiedBy(LivingEntity caster) {
+        ItemStack held = caster.getMainHandItem();
         return switch (this) {
             case ANY -> true;
             case SWORD -> held.is(ItemTags.SWORDS);

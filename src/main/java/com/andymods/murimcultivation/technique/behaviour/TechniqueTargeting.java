@@ -34,10 +34,16 @@ public final class TechniqueTargeting {
         if (target instanceof Player && !MurimConfig.techniquesHarmPlayers()) {
             return false;
         }
-        // A sword art cast into a crowd must not cut down the caster's own sect-mates.
-        if (caster instanceof MartialArtistEntity artist && target instanceof MartialArtistEntity other
-                && artist.sectId().equals(other.sectId())) {
-            return false;
+        // A sword art cast into a crowd must not cut down the caster's own sect-mates, nor a
+        // player the artist is not fighting — a bystander to its duel, or someone it has no
+        // quarrel with. canAttack already knows who that is: an enemy, or a spar partner.
+        if (caster instanceof MartialArtistEntity artist) {
+            if (target instanceof MartialArtistEntity other && artist.sectId().equals(other.sectId())) {
+                return false;
+            }
+            if (target instanceof Player player && !artist.canAttack(player)) {
+                return false;
+            }
         }
         return !caster.isAlliedTo(target);
     }
