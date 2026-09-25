@@ -53,6 +53,19 @@ class TechniqueBehavioursTest {
     }
 
     @Test
+    void everyNpcUsableBehaviourExistsAndIsInstant() {
+        // An id here that names no behaviour would leave an NPC choosing an art it can never
+        // cast; a sustained one would be refused every time, since only players carry its state.
+        Set<String> sustained = Set.of("sword_force", "iron_body", "qinggong", "water_walking");
+        assertTrue(!TechniqueBehaviours.npcUsableIds().isEmpty(), "NPCs would have no arts at all");
+        for (ResourceLocation id : TechniqueBehaviours.npcUsableIds()) {
+            assertTrue(TechniqueBehaviours.isRegistered(id), "npc-usable but not registered: " + id);
+            assertTrue(!sustained.contains(id.getPath()), "sustained art offered to NPCs: " + id);
+            assertTrue(TechniqueBehaviours.npcUsable(id));
+        }
+    }
+
+        @Test
     void theRegistryIsNotEmpty() {
         // Guards against the static initialiser silently failing to run.
         assertEquals(EXPECTED.size(), TechniqueBehaviours.ids().size());

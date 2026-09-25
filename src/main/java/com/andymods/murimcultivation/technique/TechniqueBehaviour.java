@@ -1,7 +1,7 @@
 package com.andymods.murimcultivation.technique;
 
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 
 /**
  * What a technique actually does when it fires.
@@ -25,9 +25,15 @@ public interface TechniqueBehaviour {
      * Fires the technique. Called server-side only, after every gate has passed and the Qi
      * has been deducted.
      *
+     * <p>The caster is a {@link LivingEntity} so sect martial artists fight with the very same
+     * arts players learn, rather than look-alikes that drift out of step with the datapack.
+     * Only the arts in {@link TechniqueBehaviours#npcUsable} are ever offered to a non-player;
+     * the rest keep state only a player carries and return {@code false} for anyone else.
+     *
+     * @param caster  who is casting: a player, or a martial artist
      * @param id      the technique's registry id
-     * @param mastery the player's mastery of this technique, 0–100
+     * @param mastery the caster's mastery of this technique, 0–100
      * @return whether the technique did something
      */
-    boolean execute(ServerPlayer player, ResourceLocation id, Technique technique, int mastery);
+    boolean execute(LivingEntity caster, ResourceLocation id, Technique technique, int mastery);
 }

@@ -12,6 +12,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
@@ -28,8 +29,13 @@ public final class SustainBehaviours {
      * technique when it runs dry. Without upkeep a defensive buff is strictly better than a
      * timed one, and there is no reason ever to turn it off.
      */
-    public static boolean ironBody(ServerPlayer player, ResourceLocation id,
+    public static boolean ironBody(LivingEntity caster, ResourceLocation id,
                                   Technique technique, int mastery) {
+        // Sustained arts keep their state and Qi upkeep in the caster's CultivationData, which
+        // only a player carries. Refused for anyone else, and not offered to NPCs at all.
+        if (!(caster instanceof ServerPlayer player)) {
+            return false;
+        }
         int duration = Math.max(1, technique.power().durationTicks());
         int amplifier = technique.power().amplifier();
 
@@ -56,24 +62,24 @@ public final class SustainBehaviours {
      * <p>Refuses at full health, which is what makes the refund path in the cast pipeline worth
      * having: casting it topped up should cost nothing.
      */
-    public static boolean internalHealing(ServerPlayer player, ResourceLocation id,
+    public static boolean internalHealing(LivingEntity caster, ResourceLocation id,
                                           Technique technique, int mastery) {
-        if (player.getHealth() >= player.getMaxHealth()) {
-            player.displayClientMessage(
-                    Component.translatable("murimcultivation.technique.already_healthy"), true);
+        if (caster.getHealth() >= caster.getMaxHealth()) {
+            TechniqueTargeting.tellCaster(caster,
+                    Component.translatable("murimcultivation.technique.already_healthy"));
             return false;
         }
 
         double amount = technique.power().healAmount() + TechniqueMastery.damage(technique.power(), mastery);
-        player.heal((float) amount);
+        caster.heal((float) amount);
 
-        if (player.level() instanceof ServerLevel level) {
+        if (caster.level() instanceof ServerLevel level) {
             level.sendParticles(ParticleTypes.HEART,
-                    player.getX(), player.getY() + 1.4D, player.getZ(),
+                    caster.getX(), caster.getY() + 1.4D, caster.getZ(),
                     5, 0.3D, 0.2D, 0.3D, 0.0D);
         }
-        player.level().playSound(null, player.blockPosition(),
-                SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.7F, 1.6F);
+        caster.level().playSound(null, caster.blockPosition(),
+                SoundEvents.AMETHYST_BLOCK_CHIME, caster.getSoundSource(), 0.7F, 1.6F);
         return true;
     }
 }

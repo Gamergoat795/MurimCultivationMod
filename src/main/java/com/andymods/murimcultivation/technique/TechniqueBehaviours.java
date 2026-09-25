@@ -46,7 +46,25 @@ public final class TechniqueBehaviours {
         register(INTERNAL_HEALING, SustainBehaviours::internalHealing);
     }
 
+    /**
+     * The behaviours a non-player may cast: the instant ones. Sword Force, Iron Body, Qinggong
+     * and Water Walking are sustained, and keep their duration and Qi upkeep in a player's
+     * {@code CultivationData}, so they are never offered to a martial artist.
+     */
+    private static final Set<ResourceLocation> NPC_USABLE =
+            Set.of(SWORD_QI, DIVINE_PALM, SHADOWLESS_STEP, INTERNAL_HEALING);
+
     private TechniqueBehaviours() {
+    }
+
+    /** Whether a martial artist may cast a technique that names this behaviour. */
+    public static boolean npcUsable(ResourceLocation behaviour) {
+        return NPC_USABLE.contains(behaviour);
+    }
+
+    /** Every behaviour a non-player may cast, for validation. */
+    public static Set<ResourceLocation> npcUsableIds() {
+        return NPC_USABLE;
     }
 
     public static void register(ResourceLocation id, TechniqueBehaviour behaviour) {

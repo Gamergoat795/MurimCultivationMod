@@ -11,6 +11,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 /** 무영보 Shadowless Step, 경공 Qinggong and 수상보행 Water Walking: the arts of not being there. */
@@ -26,26 +27,26 @@ public final class MovementBehaviours {
      * <p>The i-frames are the point: this is an escape, so it has to actually get you out of
      * something rather than merely moving you while you keep taking hits.
      */
-    public static boolean shadowlessStep(ServerPlayer player, ResourceLocation id,
+    public static boolean shadowlessStep(LivingEntity caster, ResourceLocation id,
                                         Technique technique, int mastery) {
         double distance = Math.max(1.0D, technique.power().range());
-        Vec3 look = player.getLookAngle().normalize();
+        Vec3 look = caster.getLookAngle().normalize();
 
         // Flatten the vertical component so a dash is a dash, not a launch or a dive.
         Vec3 impulse = new Vec3(look.x, Math.max(-0.1D, Math.min(0.35D, look.y)), look.z)
                 .normalize()
                 .scale(distance * 0.18D);
 
-        Vec3 from = player.position();
-        player.setDeltaMovement(impulse);
-        TechniqueTargeting.syncSelfMotion(player);
+        Vec3 from = caster.position();
+        caster.setDeltaMovement(impulse);
+        TechniqueTargeting.syncSelfMotion(caster);
 
         // A brief window of immunity, in ticks, from the technique's own duration.
-        player.invulnerableTime = Math.max(player.invulnerableTime, technique.power().durationTicks());
+        caster.invulnerableTime = Math.max(caster.invulnerableTime, technique.power().durationTicks());
         // Reset fall distance so dashing off a ledge is not punished by the landing.
-        player.resetFallDistance();
+        caster.resetFallDistance();
 
-        if (player.level() instanceof ServerLevel level) {
+        if (caster.level() instanceof ServerLevel level) {
             // An after-image trail along the path taken.
             for (int i = 0; i < 12; i++) {
                 Vec3 point = from.add(impulse.scale(i / 12.0D * 5.0D));
@@ -53,8 +54,8 @@ public final class MovementBehaviours {
                         2, 0.1D, 0.2D, 0.1D, 0.01D);
             }
         }
-        player.level().playSound(null, player.blockPosition(),
-                SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.4F, 1.8F);
+        caster.level().playSound(null, caster.blockPosition(),
+                SoundEvents.ENDERMAN_TELEPORT, caster.getSoundSource(), 0.4F, 1.8F);
         return true;
     }
 
@@ -62,8 +63,13 @@ public final class MovementBehaviours {
      * 경공 Qinggong — the light-body art. Leaping across rooftops and drifting down from
      * heights, expressed through vanilla effects so it composes with everything else.
      */
-    public static boolean qinggong(ServerPlayer player, ResourceLocation id,
+    public static boolean qinggong(LivingEntity caster, ResourceLocation id,
                                    Technique technique, int mastery) {
+        // Sustained arts keep their state and Qi upkeep in the caster's CultivationData, which
+        // only a player carries. Refused for anyone else, and not offered to NPCs at all.
+        if (!(caster instanceof ServerPlayer player)) {
+            return false;
+        }
         int duration = Math.max(1, technique.power().durationTicks());
         int amplifier = technique.power().amplifier();
 
@@ -91,8 +97,13 @@ public final class MovementBehaviours {
      * behave like water. Sneaking lets you sink deliberately, which matters: without an escape
      * hatch, a buff that keeps you on the surface can trap you out of your own base.
      */
-    public static boolean waterWalking(ServerPlayer player, ResourceLocation id,
+    public static boolean waterWalking(LivingEntity caster, ResourceLocation id,
                                        Technique technique, int mastery) {
+        // Sustained arts keep their state and Qi upkeep in the caster's CultivationData, which
+        // only a player carries. Refused for anyone else, and not offered to NPCs at all.
+        if (!(caster instanceof ServerPlayer player)) {
+            return false;
+        }
         TechniqueBuffs.start(player, id, Math.max(1, technique.power().durationTicks()));
         player.level().playSound(null, player.blockPosition(),
                 SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 0.6F, 0.9F);

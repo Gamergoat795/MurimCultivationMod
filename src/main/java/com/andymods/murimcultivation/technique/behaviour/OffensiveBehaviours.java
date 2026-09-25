@@ -33,13 +33,13 @@ public final class OffensiveBehaviours {
      * its path, which is what a slash should do, and it needs no entity registration or
      * renderer to look right.
      */
-    public static boolean swordQi(ServerPlayer player, ResourceLocation id,
+    public static boolean swordQi(LivingEntity caster, ResourceLocation id,
                                   Technique technique, int mastery) {
         double range = Math.max(1.0D, technique.power().range());
         double damage = TechniqueMastery.damage(technique.power(), mastery);
 
-        Vec3 origin = player.getEyePosition();
-        Vec3 direction = player.getLookAngle().normalize();
+        Vec3 origin = caster.getEyePosition();
+        Vec3 direction = caster.getLookAngle().normalize();
 
         Set<LivingEntity> struck = new HashSet<>();
         int steps = (int) Math.ceil(range * 2);
@@ -49,22 +49,22 @@ public final class OffensiveBehaviours {
 
             // Stop at the first solid block so Sword Qi does not cut through walls.
             BlockPos blockPos = BlockPos.containing(point);
-            if (!player.level().getBlockState(blockPos).isAir()
-                    && player.level().getBlockState(blockPos)
-                    .isSolidRender(player.level(), blockPos)) {
+            if (!caster.level().getBlockState(blockPos).isAir()
+                    && caster.level().getBlockState(blockPos)
+                    .isSolidRender(caster.level(), blockPos)) {
                 break;
             }
 
-            spawnSlashParticles(player, point, direction);
-            struck.addAll(TechniqueTargeting.harmableNear(player, point, 1.2D));
+            spawnSlashParticles(caster, point, direction);
+            struck.addAll(TechniqueTargeting.harmableNear(caster, point, 1.2D));
         }
 
         for (LivingEntity target : struck) {
-            target.hurt(player.damageSources().playerAttack(player), (float) damage);
+            target.hurt(TechniqueTargeting.damageFrom(caster), (float) damage);
         }
 
-        player.level().playSound(null, player.blockPosition(),
-                SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.0F, 0.8F);
+        caster.level().playSound(null, caster.blockPosition(),
+                SoundEvents.PLAYER_ATTACK_SWEEP, caster.getSoundSource(), 1.0F, 0.8F);
 
         // Always fires: the slash happens whether or not it connects, so a miss still costs Qi.
         return true;
@@ -76,40 +76,40 @@ public final class OffensiveBehaviours {
      * <p>Refuses when nothing is in reach, so a palm strike into empty air is refunded rather
      * than wasted.
      */
-    public static boolean divinePalm(ServerPlayer player, ResourceLocation id,
+    public static boolean divinePalm(LivingEntity caster, ResourceLocation id,
                                      Technique technique, int mastery) {
         double radius = Math.max(1.0D, technique.power().radius());
         double damage = TechniqueMastery.damage(technique.power(), mastery);
         double knockback = technique.power().knockback();
 
-        Vec3 look = player.getLookAngle().normalize();
-        Vec3 centre = player.position().add(look.scale(radius * 0.5D)).add(0.0D, 1.0D, 0.0D);
+        Vec3 look = caster.getLookAngle().normalize();
+        Vec3 centre = caster.position().add(look.scale(radius * 0.5D)).add(0.0D, 1.0D, 0.0D);
 
-        List<LivingEntity> targets = TechniqueTargeting.harmableNear(player, centre, radius);
+        List<LivingEntity> targets = TechniqueTargeting.harmableNear(caster, centre, radius);
         // Keep only what is actually in front: a palm strike is a cone, not an aura.
         targets.removeIf(target -> {
-            Vec3 toTarget = target.position().subtract(player.position()).normalize();
+            Vec3 toTarget = target.position().subtract(caster.position()).normalize();
             return look.dot(toTarget) < 0.35D;
         });
 
         if (targets.isEmpty()) {
-            player.displayClientMessage(
-                    Component.translatable("murimcultivation.technique.nothing_in_reach"), true);
+            TechniqueTargeting.tellCaster(caster,
+                    Component.translatable("murimcultivation.technique.nothing_in_reach"));
             return false;
         }
 
         for (LivingEntity target : targets) {
-            target.hurt(player.damageSources().playerAttack(player), (float) damage);
-            Vec3 away = target.position().subtract(player.position()).normalize();
+            target.hurt(TechniqueTargeting.damageFrom(caster), (float) damage);
+            Vec3 away = target.position().subtract(caster.position()).normalize();
             TechniqueTargeting.knockBack(target, away.scale(knockback).add(0.0D, knockback * 0.35D, 0.0D));
         }
 
-        if (player.level() instanceof ServerLevel level) {
+        if (caster.level() instanceof ServerLevel level) {
             level.sendParticles(ParticleTypes.CLOUD, centre.x, centre.y, centre.z,
                     30, radius * 0.4D, 0.3D, radius * 0.4D, 0.08D);
         }
-        player.level().playSound(null, player.blockPosition(),
-                SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 0.7F);
+        caster.level().playSound(null, caster.blockPosition(),
+                SoundEvents.PLAYER_ATTACK_STRONG, caster.getSoundSource(), 1.0F, 0.7F);
         return true;
     }
 
@@ -117,8 +117,13 @@ public final class OffensiveBehaviours {
      * 검강 Sword Force — Qi condensed onto the blade itself. A sustained buff to damage and
      * reach rather than a strike, so it changes how you fight for its duration.
      */
-    public static boolean swordForce(ServerPlayer player, ResourceLocation id,
+    public static boolean swordForce(LivingEntity caster, ResourceLocation id,
                                      Technique technique, int mastery) {
+        // Sustained arts keep their state and Qi upkeep in the caster's CultivationData, which
+        // only a player carries. Refused for anyone else, and not offered to NPCs at all.
+        if (!(caster instanceof ServerPlayer player)) {
+            return false;
+        }
         int duration = Math.max(1, technique.power().durationTicks());
         double bonusDamage = TechniqueMastery.damage(technique.power(), mastery);
         double bonusReach = technique.power().radius();
@@ -139,8 +144,8 @@ public final class OffensiveBehaviours {
         return true;
     }
 
-    private static void spawnSlashParticles(ServerPlayer player, Vec3 point, Vec3 direction) {
-        if (!(player.level() instanceof ServerLevel level)) {
+    private static void spawnSlashParticles(LivingEntity caster, Vec3 point, Vec3 direction) {
+        if (!(caster.level() instanceof ServerLevel level)) {
             return;
         }
         level.sendParticles(ParticleTypes.SWEEP_ATTACK, point.x, point.y, point.z,
