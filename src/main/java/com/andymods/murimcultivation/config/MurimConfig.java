@@ -67,6 +67,9 @@ public final class MurimConfig {
         private final ModConfigSpec.IntValue statPointsPerRealm;
         private final ModConfigSpec.IntValue dailyResetIntervalDays;
         private final ModConfigSpec.DoubleValue npcCooldownMultiplier;
+        private final ModConfigSpec.IntValue sparWinReputation;
+        private final ModConfigSpec.IntValue opposedKillReputation;
+        private final ModConfigSpec.IntValue kinslayerPenalty;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
 
@@ -316,6 +319,21 @@ public final class MurimConfig {
                             "keeps an artist from casting as often as a player could.")
                     .defineInRange("npcCooldownMultiplier", 2.0D, 0.1D, 100.0D);
 
+            sparWinReputation = builder
+                    .comment("Standing earned by beating a member of your own sect in a spar.",
+                            "Paid at most once per artist per in-game day, so it cannot be farmed",
+                            "off one patient sparring partner.")
+                    .defineInRange("sparWinReputation", 20, 0, 100000);
+
+            opposedKillReputation = builder
+                    .comment("Standing earned, with each of your sects, for slaying a martial artist",
+                            "of a sect that opposes it.")
+                    .defineInRange("opposedKillReputation", 40, 0, 100000);
+
+            kinslayerPenalty = builder
+                    .comment("Standing lost for slaying a martial artist of your own sect.")
+                    .defineInRange("kinslayerPenalty", 200, 0, 100000);
+
             builder.pop();
             builder.comment("Performance and presentation").push("general");
 
@@ -515,6 +533,18 @@ public final class MurimConfig {
 
     public static double npcCooldownMultiplier() {
         return VALUES.npcCooldownMultiplier.get();
+    }
+
+    public static int sparWinReputation() {
+        return VALUES.sparWinReputation.get();
+    }
+
+    public static int opposedKillReputation() {
+        return VALUES.opposedKillReputation.get();
+    }
+
+    public static int kinslayerPenalty() {
+        return VALUES.kinslayerPenalty.get();
     }
 
     public static int cultivationTickInterval() {

@@ -1,0 +1,28 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.hermit_trial",
+  "description_key": "murimcultivation.quest.hermit_trial.description",
+  "required_realm_tier": 1,
+  "required_sect": "murimcultivation:hermit_valley",
+  "objectives": [
+    {
+      "kind": "meditate_seconds",
+      "amount": 1200
+    },
+    {
+      "kind": "win_spars",
+      "amount": 1
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "sect_reputation",
+      "amount": 150,
+      "target": "murimcultivation:hermit_valley"
+    },
+    {
+      "kind": "purity",
+      "amount": 3
+    }
+  ]
+}

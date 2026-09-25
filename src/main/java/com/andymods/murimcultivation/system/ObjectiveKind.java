@@ -39,7 +39,10 @@ public enum ObjectiveKind implements StringRepresentable {
     REACH_PURITY("reach_purity", false),
 
     /** Survive a Qi Deviation through to its end. */
-    SURVIVE_DEVIATION("survive_deviation", false);
+    SURVIVE_DEVIATION("survive_deviation", false),
+
+    /** Beat a number of martial artists in spars. */
+    WIN_SPARS("win_spars", false);
 
     public static final Codec<ObjectiveKind> CODEC = StringRepresentable.fromEnum(ObjectiveKind::values);
 
@@ -65,7 +68,7 @@ public enum ObjectiveKind implements StringRepresentable {
      */
     public boolean isCumulative() {
         return switch (this) {
-            case MEDITATE_SECONDS, CAST_TECHNIQUE, KILL_ENTITIES, SURVIVE_DEVIATION -> true;
+            case MEDITATE_SECONDS, CAST_TECHNIQUE, KILL_ENTITIES, SURVIVE_DEVIATION, WIN_SPARS -> true;
             case REACH_REALM, OPEN_MERIDIANS, LEARN_TECHNIQUE, MASTER_TECHNIQUE, REACH_PURITY -> false;
         };
     }

@@ -72,7 +72,15 @@ class NpcCombatTest {
         assertTrue(Sparring.abandoned(100L, 100L, tooFar));
     }
 
-    // --- What an artist knows ---------------------------------------------------------
+    @Test
+    void sparringStandingIsPaidOnceADay() {
+        assertTrue(Sparring.earnsReputation(null, 3L), "the first win against an artist pays");
+        assertFalse(Sparring.earnsReputation(3L, 3L), "a second win the same day does not");
+        assertTrue(Sparring.earnsReputation(3L, 4L), "the next day pays again");
+        assertTrue(Sparring.earnsReputation(9L, 4L), "a clock set backwards does not lock it away");
+    }
+
+        // --- What an artist knows ---------------------------------------------------------
 
     @Test
     void rankAndMasteryRiseWithRealm() {

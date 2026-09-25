@@ -2,6 +2,7 @@ package com.andymods.murimcultivation.npc;
 
 import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.AttributeGrant;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.Realm;
@@ -9,6 +10,8 @@ import com.andymods.murimcultivation.cultivation.RealmProgression;
 import com.andymods.murimcultivation.sect.Sect;
 import com.andymods.murimcultivation.sect.SectRank;
 import com.andymods.murimcultivation.sect.SectService;
+import com.andymods.murimcultivation.system.ObjectiveKind;
+import com.andymods.murimcultivation.system.QuestTracker;
 import com.andymods.murimcultivation.technique.HandRequirement;
 import com.andymods.murimcultivation.technique.Technique;
 import com.andymods.murimcultivation.technique.TechniqueBehaviours;
@@ -16,6 +19,8 @@ import com.andymods.murimcultivation.technique.TechniqueService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -74,6 +79,7 @@ public class MartialArtistEntity extends PathfinderMob {
 
     private static final String SECT_TAG = "Sect";
     private static final String REALM_TIER_TAG = "RealmTier";
+    private static final String SPAR_REWARDS_TAG = "SparRewards";
 
     /** Which sect this artist serves. Defaults to the Alliance so a spawned one is never inert. */
     private ResourceLocation sect = MurimCultivationMod.id("murim_alliance");
@@ -102,6 +108,12 @@ public class MartialArtistEntity extends PathfinderMob {
     /** The player this artist is sparring with, if any, and when they last traded blows. */
     private UUID sparPartner;
     private long lastExchange;
+
+    /**
+     * The in-game day each player last earned standing by beating this artist. Saved, so the
+     * once-a-day limit on sparring reputation survives the artist's chunk unloading.
+     */
+    private final Map<UUID, Long> sparRewardDay = new HashMap<>();
 
     @Override
     protected void registerGoals() {
@@ -191,11 +203,24 @@ public class MartialArtistEntity extends PathfinderMob {
         lastExchange = level().getGameTime();
     }
 
-    /** The player has beaten this artist in a spar. */
+    /**
+     * The player has beaten this artist in a spar. Counts toward sparring quests whoever the
+     * artist serves; earns standing only with the player's own sect, and only once a day per
+     * artist, so standing comes from sparring widely rather than from one patient partner.
+     */
     public void yieldTo(ServerPlayer player) {
         say(player, "murimcultivation.npc.spar.yield");
         endSpar();
         setHealth(getMaxHealth());
+
+        QuestTracker.recordProgress(player, ObjectiveKind.WIN_SPARS, 1);
+        if (SectService.isMemberOf(player, sect)) {
+            long today = level().getDayTime() / Sparring.TICKS_PER_DAY;
+            if (Sparring.earnsReputation(sparRewardDay.get(player.getUUID()), today)) {
+                sparRewardDay.put(player.getUUID(), today);
+                SectService.award(player, sect, MurimConfig.sparWinReputation());
+            }
+        }
     }
 
     /** This artist has beaten the player in a spar. */
@@ -366,7 +391,17 @@ public class MartialArtistEntity extends PathfinderMob {
         Sect theirSect = found.get();
         SectRank rank = SectService.rankIn(serverPlayer, sect);
         if (!rank.isMember()) {
-            say(serverPlayer, "murimcultivation.npc.not_a_member", theirSect.fullDisplayName());
+            // Sneaking is asking to join; a plain word is asking who they are.
+            if (serverPlayer.isShiftKeyDown()) {
+                SectService.JoinResult result = SectService.join(serverPlayer, sect);
+                if (result.accepted()) {
+                    say(serverPlayer, "murimcultivation.npc.welcome");
+                } else {
+                    say(serverPlayer, result.message());
+                }
+            } else {
+                introduce(serverPlayer, theirSect);
+            }
             return InteractionResult.CONSUME;
         }
 
@@ -399,6 +434,21 @@ public class MartialArtistEntity extends PathfinderMob {
         return InteractionResult.CONSUME;
     }
 
+    /** Who this sect is, which side it stands on, whom it takes, and how to ask. */
+    private void introduce(ServerPlayer player, Sect theirSect) {
+        Component realm = RealmProgression.atOrBelow(
+                        RealmProgression.registry(level().registryAccess()), theirSect.requiredRealmTier())
+                .or(() -> RealmProgression.lowest(RealmProgression.registry(level().registryAccess())))
+                .map(holder -> (Component) Component.translatable(holder.value().translationKey()))
+                .orElse(Component.empty());
+        say(player, "murimcultivation.npc.introduce", theirSect.fullDisplayName(),
+                Component.translatable(theirSect.alignment().translationKey()), realm);
+    }
+
+    private void say(ServerPlayer player, Component line) {
+        player.sendSystemMessage(Component.translatable("murimcultivation.npc.prefix", getDisplayName(), line));
+    }
+
     private void say(ServerPlayer player, String key, Object... args) {
         Component[] components = new Component[args.length];
         for (int i = 0; i < args.length; i++) {
@@ -414,6 +464,14 @@ public class MartialArtistEntity extends PathfinderMob {
         super.addAdditionalSaveData(tag);
         tag.putString(SECT_TAG, sect.toString());
         tag.putInt(REALM_TIER_TAG, realmTier);
+        ListTag rewards = new ListTag();
+        sparRewardDay.forEach((player, day) -> {
+            CompoundTag entry = new CompoundTag();
+            entry.putUUID("Player", player);
+            entry.putLong("Day", day);
+            rewards.add(entry);
+        });
+        tag.put(SPAR_REWARDS_TAG, rewards);
     }
 
     @Override
@@ -427,6 +485,13 @@ public class MartialArtistEntity extends PathfinderMob {
         }
         if (tag.contains(REALM_TIER_TAG)) {
             realmTier = Math.max(1, tag.getInt(REALM_TIER_TAG));
+        }
+        sparRewardDay.clear();
+        for (Tag element : tag.getList(SPAR_REWARDS_TAG, Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) element;
+            if (entry.hasUUID("Player")) {
+                sparRewardDay.put(entry.getUUID("Player"), entry.getLong("Day"));
+            }
         }
     }
 

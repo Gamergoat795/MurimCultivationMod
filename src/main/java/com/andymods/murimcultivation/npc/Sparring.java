@@ -18,7 +18,19 @@ public final class Sparring {
     /** Walking further apart than this, in blocks, abandons the spar. */
     public static final double MAX_DISTANCE = 16.0D;
 
+    /** Length of an in-game day, in ticks, for the once-a-day limit on sparring standing. */
+    public static final long TICKS_PER_DAY = 24000L;
+
     private Sparring() {
+    }
+
+    /**
+     * Whether beating an artist today still earns standing: never paid before, or last paid on
+     * an earlier day. A day that has gone backwards (a server that reset its time) pays too,
+     * rather than locking the reward away until the clock catches up.
+     */
+    public static boolean earnsReputation(Long lastPaidDay, long today) {
+        return lastPaidDay == null || today != lastPaidDay;
     }
 
     /**

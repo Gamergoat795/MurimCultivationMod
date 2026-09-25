@@ -8,6 +8,7 @@ import com.andymods.murimcultivation.cultivation.Meridian;
 import com.andymods.murimcultivation.cultivation.Realm;
 import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.registry.ModItems;
+import com.andymods.murimcultivation.sect.SectService;
 import com.andymods.murimcultivation.technique.TechniqueService;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -67,6 +68,10 @@ public final class QuestTracker {
             if (!log.isCompleted(prerequisite)) {
                 return false;
             }
+        }
+        // A sect's own quests are only offered to its members.
+        if (quest.requiredSect().isPresent() && !SectService.isMemberOf(player, quest.requiredSect().get())) {
+            return false;
         }
         return CultivationService.realmOf(player)
                 .map(realm -> realm.tier() >= quest.requiredRealmTier())
@@ -226,6 +231,8 @@ public final class QuestTracker {
                     SystemNotifications.send(player, SystemNotification.titleEarned(titleName(player, id)));
                 }
             });
+            case SECT_REPUTATION -> reward.target().ifPresent(id ->
+                    SectService.award(player, id, (int) reward.amount()));
         }
     }
 

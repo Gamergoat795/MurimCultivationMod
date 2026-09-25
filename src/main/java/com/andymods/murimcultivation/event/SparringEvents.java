@@ -3,6 +3,7 @@ package com.andymods.murimcultivation.event;
 import com.andymods.murimcultivation.MurimCultivationMod;
 import com.andymods.murimcultivation.npc.MartialArtistEntity;
 import com.andymods.murimcultivation.npc.Sparring;
+import com.andymods.murimcultivation.sect.SectService;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -10,11 +11,13 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
 /**
  * Keeps a spar a spar: nobody is killed by their sparring partner, and whoever is beaten
- * yields instead of fighting on.
+ * yields instead of fighting on. Also where slaying a martial artist moves a player's standing,
+ * since that is the other way a fight with one ends.
  *
  * <p>Two events because the two jobs need different moments. Capping a blow has to happen
  * before it lands; deciding who has been beaten has to happen after, against the health that
@@ -61,6 +64,15 @@ public final class SparringEvents {
                 && artist.isSparringWith(player)
                 && Sparring.yields(player.getHealth(), player.getMaxHealth())) {
             artist.acceptYieldFrom(player);
+        }
+    }
+
+    /** Standing for slaying a martial artist: earned against an opposing sect, lost against your own. */
+    @SubscribeEvent
+    public static void onDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof MartialArtistEntity victim
+                && event.getSource().getEntity() instanceof ServerPlayer player) {
+            SectService.onArtistSlain(player, victim.sectId());
         }
     }
 

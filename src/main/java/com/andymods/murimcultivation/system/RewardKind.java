@@ -22,7 +22,10 @@ public enum RewardKind implements StringRepresentable {
     TECHNIQUE("technique", true),
 
     /** A title. The target is a title id. */
-    TITLE("title", true);
+    TITLE("title", true),
+
+    /** Standing with a sect. The target is a sect id. */
+    SECT_REPUTATION("sect_reputation", true);
 
     public static final Codec<RewardKind> CODEC = StringRepresentable.fromEnum(RewardKind::values);
 

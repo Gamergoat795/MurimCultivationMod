@@ -1,0 +1,18 @@
+{
+  "category": "daily",
+  "translation_key": "murimcultivation.quest.daily_bout",
+  "description_key": "murimcultivation.quest.daily_bout.description",
+  "required_realm_tier": 1,
+  "objectives": [
+    {
+      "kind": "win_spars",
+      "amount": 1
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "progress",
+      "amount": 40
+    }
+  ]
+}

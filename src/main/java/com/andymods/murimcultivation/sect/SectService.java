@@ -1,6 +1,7 @@
 package com.andymods.murimcultivation.sect;
 
 import com.andymods.murimcultivation.MurimRegistries;
+import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.system.SystemNotification;
@@ -162,6 +163,45 @@ public final class SectService {
                 Component.translatable("murimcultivation.sect.left", sect.fullDisplayName())));
         CultivationService.syncToClient(player);
         return true;
+    }
+
+    /**
+     * Grants (or, when negative, takes) standing as the result of something the player did,
+     * and tells them on the action bar. {@link #addReputation} stays silent because commands
+     * and quests report on their own; this is for standing earned in the world.
+     */
+    public static void award(ServerPlayer player, ResourceLocation id, int amount) {
+        if (amount == 0) {
+            return;
+        }
+        byId(player, id).ifPresent(sect -> {
+            addReputation(player, id, amount);
+            player.displayClientMessage(Component.translatable(
+                    amount > 0 ? "murimcultivation.sect.reputation.gained" : "murimcultivation.sect.reputation.lost",
+                    Math.abs(amount), sect.displayName()), true);
+        });
+    }
+
+    /**
+     * Standing for slaying a martial artist. Killing one of your own sect costs dearly; killing
+     * one of a sect opposing yours earns standing with every sect of yours that it opposes.
+     * Slaying a neutral artist, or anyone as a player with no sect, changes nothing.
+     */
+    public static void onArtistSlain(ServerPlayer player, ResourceLocation victimSect) {
+        Optional<Sect> victim = byId(player, victimSect);
+        if (victim.isEmpty()) {
+            return;
+        }
+        if (isMemberOf(player, victimSect)) {
+            award(player, victimSect, -MurimConfig.kinslayerPenalty());
+            return;
+        }
+        for (var entry : registry(player).entrySet()) {
+            ResourceLocation ownId = entry.getKey().location();
+            if (entry.getValue().alignment().opposes(victim.get().alignment()) && isMemberOf(player, ownId)) {
+                award(player, ownId, MurimConfig.opposedKillReputation());
+            }
+        }
     }
 
     /**

@@ -149,8 +149,9 @@ def check_translation_keys() -> None:
         f"{MODID}.sect_rank.": enum_ids("src/main/java/com/andymods/murimcultivation/sect/SectRank.java"),
         f"{MODID}.sect_alignment.": enum_ids(
             "src/main/java/com/andymods/murimcultivation/sect/SectAlignment.java"),
-        f"{MODID}.npc.": ["prefix", "no_sect", "not_a_member", "nothing_left",
-                          "rise_further", "unknown_art", "taught"],
+        f"{MODID}.npc.": ["prefix", "no_sect", "introduce", "welcome", "nothing_left",
+                          "rise_further", "unknown_art", "taught",
+                          "spar.begin", "spar.yield", "spar.victory"],
         f"{MODID}.pill.": [f"{effect}.{suffix}"
                            for effect in ("qi_recovery", "deviation_remedy", "purity")
                            for suffix in ("description", "wasted")] + ["not_awakened"],
@@ -262,6 +263,7 @@ def check_quest_consistency(realms: list, techniques: dict) -> None:
     quests = {os.path.basename(p)[:-len(".json")]: json.load(open(p, encoding="utf-8"))
               for p in glob.glob(f"{DATA_DIR}/quest/*.json")}
     titles = set(datapack_ids("title"))
+    sects = set(datapack_ids("sect"))
     if not quests:
         return
 
@@ -305,6 +307,14 @@ def check_quest_consistency(realms: list, techniques: dict) -> None:
                 fail(f"quest {name}: reward names an unknown technique: {target}")
             if reward["kind"] == "title" and local(target) not in titles:
                 fail(f"quest {name}: reward names an unknown title: {target}")
+            if reward["kind"] == "sect_reputation" and local(target) not in sects:
+                fail(f"quest {name}: reward grants standing with an unknown sect: {target}")
+
+        # A sect quest for a sect that does not exist can never be offered to anyone.
+        required_sect = quest.get("required_sect")
+        if required_sect is not None and local(required_sect) not in sects:
+            fail(f"quest {name}: required_sect names an unknown sect: {required_sect}")
+
 
     # A cycle makes every quest in it unreachable, and nothing in one file reveals it.
     visiting: set = set()

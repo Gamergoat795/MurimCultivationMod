@@ -17,6 +17,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -37,7 +39,8 @@ class QuestDefinitionsTest {
     private static final List<String> EXPECTED_QUESTS = List.of(
             "first_breath", "clean_foundation", "first_art", "open_the_way", "second_rate",
             "practised_hand", "tempered", "first_rate",
-            "daily_breathing", "daily_sparring", "daily_drilling");
+            "daily_breathing", "daily_sparring", "daily_drilling",
+            "alliance_trial", "cult_trial", "hermit_trial", "daily_bout");
 
     private static final List<String> EXPECTED_TITLES = List.of(
             "no_longer_nameless", "tempered_by_failure", "first_rate_martial_artist");
@@ -115,6 +118,18 @@ class QuestDefinitionsTest {
     }
 
     @Test
+    void everySectHasAQuestOfItsOwn() {
+        // Joining a sect should open something new in the System window, not only a teacher.
+        Set<String> sectsWithQuests = loadQuests().values().stream()
+                .flatMap(quest -> quest.requiredSect().stream())
+                .map(ResourceLocation::getPath)
+                .collect(Collectors.toSet());
+        for (String sect : List.of("murim_alliance", "demonic_cult", "hermit_valley")) {
+            assertTrue(sectsWithQuests.contains(sect), sect + " has no quest of its own");
+        }
+    }
+
+        @Test
     void everyQuestHasAtLeastOneObjectiveAndAReward() {
         loadQuests().forEach((name, quest) -> {
             assertTrue(!quest.objectives().isEmpty(), name + " has no objectives");

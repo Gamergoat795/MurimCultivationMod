@@ -1,0 +1,24 @@
+{
+  "category": "story",
+  "translation_key": "murimcultivation.quest.alliance_trial",
+  "description_key": "murimcultivation.quest.alliance_trial.description",
+  "required_realm_tier": 2,
+  "required_sect": "murimcultivation:murim_alliance",
+  "objectives": [
+    {
+      "kind": "win_spars",
+      "amount": 3
+    }
+  ],
+  "rewards": [
+    {
+      "kind": "sect_reputation",
+      "amount": 150,
+      "target": "murimcultivation:murim_alliance"
+    },
+    {
+      "kind": "progress",
+      "amount": 200
+    }
+  ]
+}

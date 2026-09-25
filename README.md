@@ -129,6 +129,36 @@ Four techniques can be bound at once. Slot 1 defaults to `R`; slots 2–4 ship u
 can assign keys that do not clash with your other mods, and `C` cycles the selected slot if
 you would rather use one cast key.
 
+## Sects and martial artists
+
+Three sects wander the world, each in its own territory:
+
+| Sect | Hangul | Side | Found in | Takes you at |
+|---|---|---|---|---|
+| Murim Alliance | 무림맹 | orthodox | plains and forests | Second-Rate |
+| Demonic Cult | 마교 | demonic | badlands and dark forests | Second-Rate |
+| Hermit Valley | 은둔곡 | neutral | cherry groves, meadows, bamboo jungles | Third-Rate |
+
+Their martial artists spawn in small groups, each at a realm of their own with that realm's
+strength, robed in their sect's colour, and armed for their sect's arts — a sword for the
+Alliance, bare hands for the Cult's palm arts. They fight with the same techniques you learn.
+
+- **Talk** to one (right-click) to hear who they are and what joining takes.
+- **Join** by crouching and right-clicking. Joining one side of the Alliance/Cult divide
+  closes the other.
+- **Learn** from a member of your own sect: right-click and they teach the next art your rank
+  allows.
+- **Spar** by striking an artist who is not your enemy. Nobody can die in a spar; the first
+  below 30% health yields. Beating a member of your own sect earns standing with it, once per
+  artist per in-game day.
+- **Fight**: artists attack on sight anyone who has joined a sect opposing theirs. Slaying an
+  artist of an opposing sect earns standing with your own; slaying one of your own costs a
+  great deal of it.
+
+Standing raises your rank — outer disciple, inner, core, elder, patriarch — and rank decides
+which arts your sect will teach. Each sect also has a quest of its own that only its members
+are offered, and the reputation numbers are all in the `sects` section of the server config.
+
 ## The System window
 
 Press `K`. A window only you can see, in four tabs:
@@ -147,7 +177,8 @@ Stat points come from clearing substages and breaking through realms. Body raise
 raises damage, Meridian widens your Qi capacity, and Insight makes you cultivate faster — a bet
 that the run is long enough to pay it back.
 
-Quests are datapack content, in two kinds. The story chain runs from awakening to First-Rate.
+Quests are datapack content, in two kinds. The story chain runs from awakening to First-Rate,
+and each sect adds a story quest only its members see.
 Dailies reset each in-game day by default; because a Minecraft day is twenty minutes, that is
 configurable via `dailyResetIntervalDays`, and daily rewards are deliberately smaller than story
 rewards.
@@ -217,7 +248,10 @@ system/       the System window's data: quests, titles, stat points
 network/      CustomPacketPayload records, client handling isolated to Dist.CLIENT
 client/       HUD layers, the System screen, the NPC renderer, keybinds
 registry/     every DeferredRegister and the datapack registry keys
-sect/ npc/ alchemy/ world/   skeletons for a later milestone
+sect/         sects, ranks, reputation and territory
+npc/          martial artists: spawning, combat with shared techniques, sparring
+alchemy/      the pill cauldron and pill formulas
+world/        spirit veins and local Qi sources
 ```
 
 ## License

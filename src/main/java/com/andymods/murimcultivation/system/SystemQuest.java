@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A quest, loaded from a datapack.
@@ -23,7 +24,8 @@ public record SystemQuest(
         int requiredRealmTier,
         List<ResourceLocation> prerequisites,
         List<QuestObjective> objectives,
-        List<QuestReward> rewards
+        List<QuestReward> rewards,
+        Optional<ResourceLocation> requiredSect
 ) {
 
     public static final Codec<SystemQuest> CODEC = RecordCodecBuilder.<SystemQuest>create(instance ->
@@ -37,7 +39,10 @@ public record SystemQuest(
                             .forGetter(SystemQuest::prerequisites),
                     QuestObjective.CODEC.listOf().fieldOf("objectives").forGetter(SystemQuest::objectives),
                     QuestReward.CODEC.listOf().optionalFieldOf("rewards", List.of())
-                            .forGetter(SystemQuest::rewards)
+                            .forGetter(SystemQuest::rewards),
+                    // A sect's own quest, offered only to its members.
+                    ResourceLocation.CODEC.optionalFieldOf("required_sect")
+                            .forGetter(SystemQuest::requiredSect)
             ).apply(instance, SystemQuest::new)
     ).flatXmap(SystemQuest::validate, SystemQuest::validate);
 
