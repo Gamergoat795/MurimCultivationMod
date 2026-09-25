@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "entries": [
+    "murimcultivation:common_chests",
+    "murimcultivation:temple_chests",
+    "murimcultivation:ancient_chests"
+  ]
+}

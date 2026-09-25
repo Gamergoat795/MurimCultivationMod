@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#murimcultivation:has_spirit_veins",
+  "features": "murimcultivation:spirit_vein_ore",
+  "step": "underground_ores"
+}

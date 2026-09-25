@@ -25,6 +25,31 @@ nothing else.
 > The pinned `neo_version` is a known-good floor, not necessarily the newest. Latest 21.1.x
 > builds: <https://projects.neoforged.net/neoforged/neoforge>
 
+## Getting started in survival
+
+Everything below is found or crafted; no command or creative tab is needed.
+
+- **The Qi Gathering Manual** is how you start. It turns up in village houses and temples,
+  mineshafts and dungeons, and more often in desert and jungle temples and stronghold
+  libraries. If your seed is stingy, craft one: a book, a spirit ginseng and an amethyst shard.
+- **Martial manuals** hide in the same chests. The common arts sit in village and mineshaft
+  loot, the First-Rate and Peak arts in temples and stronghold libraries, and Sword Force only
+  in ancient cities and stronghold libraries.
+- **Herbs** grow wild:
+
+  | Herb | Where | Brews into |
+  |---|---|---|
+  | Spirit Ginseng | forests and Qi-rich land — common | Qi Recovery Pill |
+  | Blood Lotus | on the water of swamps, jungles and rivers | Deviation Remedy Pill |
+  | Jade Chrysanthemum | meadows, cherry groves and flower forests — rare | Foundation Pill |
+
+  A herb can be replanted, so a patch you find can become a garden.
+- **Spirit veins** are ore-like crystals below y=40 in Qi-rich biomes. They glow faintly, so
+  they are easiest to spot in caves. They cannot be crafted; building a cultivation chamber
+  means finding them and hauling them home.
+- **The pill cauldron** is crafted from a cauldron, three iron ingots and an amethyst shard.
+  Right-click it with a herb, wait, and right-click again to collect the pills.
+
 ## Core systems
 
 ### The three numbers

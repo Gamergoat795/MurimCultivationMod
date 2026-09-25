@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#murimcultivation:grows_jade_chrysanthemum",
+  "features": "murimcultivation:jade_chrysanthemum_patch",
+  "step": "vegetal_decoration"
+}

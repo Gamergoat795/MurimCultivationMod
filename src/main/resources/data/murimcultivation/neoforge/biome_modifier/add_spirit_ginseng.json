@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#murimcultivation:grows_spirit_ginseng",
+  "features": "murimcultivation:spirit_ginseng_patch",
+  "step": "vegetal_decoration"
+}

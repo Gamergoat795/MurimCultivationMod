@@ -6,6 +6,7 @@ import com.andymods.murimcultivation.item.PillItem;
 import com.andymods.murimcultivation.item.QiGatheringManualItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.PlaceOnWaterBlockItem;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -38,18 +39,26 @@ public final class ModItems {
             ITEMS.register("pill_cauldron", () -> ModBlocks.blockItem(ModBlocks.PILL_CAULDRON.get()));
 
     // --- Herbs: the inputs to alchemy ------------------------------------------------
+    //
+    // Block items, so a herb is both what the cauldron takes and something you can plant.
+    // The ids are unchanged from when these were plain items, so the pill formulas and any
+    // herbs already sitting in a world's chests still resolve.
 
     /** A common spiritual root. Brews into a Qi recovery pill. */
     public static final DeferredHolder<Item, Item> SPIRIT_GINSENG =
-            ITEMS.register("spirit_ginseng", () -> new Item(new Item.Properties()));
+            ITEMS.register("spirit_ginseng", () -> ModBlocks.blockItem(ModBlocks.SPIRIT_GINSENG.get()));
 
-    /** Grows where Qi has pooled for a long time. Brews into a deviation remedy. */
+    /**
+     * Grows where Qi has pooled for a long time. Brews into a deviation remedy. Placed on water,
+     * like a lily pad, since that is where it grows.
+     */
     public static final DeferredHolder<Item, Item> BLOOD_LOTUS =
-            ITEMS.register("blood_lotus", () -> new Item(new Item.Properties()));
+            ITEMS.register("blood_lotus", () -> new PlaceOnWaterBlockItem(
+                    ModBlocks.BLOOD_LOTUS.get(), new Item.Properties()));
 
     /** Rare, and the only route to refining a foundation without patience. */
     public static final DeferredHolder<Item, Item> JADE_CHRYSANTHEMUM =
-            ITEMS.register("jade_chrysanthemum", () -> new Item(new Item.Properties()));
+            ITEMS.register("jade_chrysanthemum", () -> ModBlocks.blockItem(ModBlocks.JADE_CHRYSANTHEMUM.get()));
 
     // --- Pills: refined, and each one answers a real problem -------------------------
 

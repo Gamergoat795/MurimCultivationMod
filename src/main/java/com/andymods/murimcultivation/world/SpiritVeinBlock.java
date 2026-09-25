@@ -15,8 +15,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * usable and testable now, before there is any worldgen to place it — and so that a server can
  * build a cultivation chamber deliberately.
  *
- * <p><strong>A skeleton.</strong> There is no generation, no depletion, and no way to find one
- * short of creative mode. Those are the next milestone's work.
+ * <p>Veins generate as small ore-like clusters below y=40 in Qi-rich biomes (see
+ * {@code worldgen/placed_feature/spirit_vein_ore.json}), and are deliberately not craftable:
+ * finding and hauling them is what a cultivation chamber costs. They do not yet deplete.
  */
 public class SpiritVeinBlock extends Block {
 

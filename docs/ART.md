@@ -30,6 +30,10 @@ list below stays honest on its own. When it prints nothing, the art is done.
 | `deviation_remedy_pill.png` | Clears a Qi Deviation | Should read as related to the blood lotus |
 | `foundation_pill.png` | +5 purity | Should read as related to the jade chrysanthemum, and as the most precious of the three |
 
+Each herb sprite does double duty: it is also what the herb looks like planted in the world
+(an X-shaped plant for ginseng and chrysanthemum, lying flat on the water for the blood lotus).
+Draw it as the whole plant, not a cut stem, and leave the background transparent.
+
 Pill and herb pairs read best when the pill picks up the herb's colour — it is the fastest way for
 a player to learn which herb brews which pill without opening a wiki.
 

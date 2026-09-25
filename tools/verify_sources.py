@@ -377,11 +377,116 @@ def check_textures() -> list[str]:
     return missing
 
 
+def registered_ids(path: str) -> set[str]:
+    """Ids passed to DeferredRegister.register in a registry class, e.g. ITEMS.register("x", ...)."""
+    return set(re.findall(r'\.register\(\s*"([a-z0-9_]+)"', open(path, encoding="utf-8").read()))
+
+
+def walk_json(node, visit) -> None:
+    """Calls visit(key, value) for every key/value pair anywhere in a JSON document."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            visit(key, value)
+            walk_json(value, visit)
+    elif isinstance(node, list):
+        for value in node:
+            walk_json(value, visit)
+
+
+def check_worldgen_and_loot() -> None:
+    """References between worldgen, loot and recipe files, none of which Java ever touches.
+
+    Every file here is read by the game at world load and by nothing else, so a typo compiles,
+    passes every unit test, and surfaces only as a log line — a chest that never contains a
+    manual, a herb that never generates — in a world someone has already started.
+    """
+    data = "src/main/resources/data"
+    ours = f"{data}/{MODID}"
+    registry_dir = "src/main/java/com/andymods/murimcultivation/registry"
+    items = registered_ids(f"{registry_dir}/ModItems.java")
+    blocks = registered_ids(f"{registry_dir}/ModBlocks.java")
+    techniques = set(datapack_ids("technique"))
+
+    def load(path: str):
+        # A file that does not parse is already reported by check_json_parses; skip it here
+        # rather than crash and hide every other problem behind one traceback.
+        try:
+            return json.load(open(path, encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+
+    def exists(kind: str, identifier: str) -> bool:
+        namespace, _, path = identifier.partition(":")
+        return namespace != MODID or os.path.isfile(f"{ours}/{kind}/{path}.json")
+
+    # The global list and the modifier files must agree both ways: a file missing from the list
+    # is silently never applied, and a listed id with no file stops every modifier loading.
+    listing = f"{data}/neoforge/loot_modifiers/global_loot_modifiers.json"
+    listed = set((load(listing) or {}).get("entries", [])) if os.path.isfile(listing) else set()
+    on_disk = {f"{MODID}:{name}" for name in
+               (os.path.basename(p)[:-len(".json")] for p in glob.glob(f"{ours}/loot_modifiers/*.json"))}
+    for missing in sorted(listed - on_disk):
+        fail(f"global_loot_modifiers.json lists {missing}, but no such loot modifier file exists")
+    for unlisted in sorted(on_disk - listed):
+        fail(f"loot modifier {unlisted} is not listed in global_loot_modifiers.json, so it never runs")
+
+    for path in sorted(glob.glob(f"{ours}/loot_modifiers/*.json")):
+        table = (load(path) or {}).get("table")
+        if table and not exists("loot_table", table):
+            fail(f"{path}: injects loot table {table}, which does not exist")
+
+    for path in sorted(glob.glob(f"{ours}/worldgen/placed_feature/*.json")):
+        feature = (load(path) or {}).get("feature")
+        if isinstance(feature, str) and not exists("worldgen/configured_feature", feature):
+            fail(f"{path}: places configured feature {feature}, which does not exist")
+
+    for path in sorted(glob.glob(f"{ours}/neoforge/biome_modifier/*.json")):
+        modifier = load(path) or {}
+        features = modifier.get("features", [])
+        for feature in [features] if isinstance(features, str) else features:
+            if not exists("worldgen/placed_feature", feature):
+                fail(f"{path}: adds placed feature {feature}, which does not exist")
+        biomes = modifier.get("biomes", "")
+        if isinstance(biomes, str) and biomes.startswith("#") and not exists("tags/worldgen/biome", biomes[1:]):
+            fail(f"{path}: targets biome tag {biomes}, which does not exist")
+
+    for path in sorted(glob.glob(f"{ours}/tags/worldgen/biome/*.json")):
+        for value in (load(path) or {}).get("values", []):
+            if isinstance(value, str) and value.startswith("#") and not exists("tags/worldgen/biome", value[1:]):
+                fail(f"{path}: includes biome tag {value}, which does not exist")
+
+    # Item, block and technique ids named inside loot, recipe and worldgen files.
+    scanned = (glob.glob(f"{ours}/loot_table/**/*.json", recursive=True)
+               + glob.glob(f"{ours}/recipe/*.json")
+               + glob.glob(f"{ours}/worldgen/**/*.json", recursive=True))
+    for path in sorted(scanned):
+        def visit(key, value, path=path):
+            if not isinstance(value, str) or not value.startswith(f"{MODID}:"):
+                return
+            local = value[len(MODID) + 1:]
+            if (key in ("name", "item", "id") and "loot_table" in path) or (key in ("item", "id") and "/recipe/" in path):
+                if local not in items:
+                    fail(f"{path}: names item {value}, which ModItems never registers")
+            elif key == "Name" and local not in blocks:
+                fail(f"{path}: names block {value}, which ModBlocks never registers")
+            elif key == f"{MODID}:technique" and local not in techniques:
+                fail(f"{path}: a manual teaches {value}, which no technique JSON defines")
+        walk_json(load(path), visit)
+
+    # Every block needs a model to render and a loot table to drop anything when broken.
+    for block in sorted(blocks):
+        if not os.path.isfile(f"{ASSETS}/blockstates/{block}.json"):
+            fail(f"block {block} has no blockstate file, so it renders as the missing model")
+        if not os.path.isfile(f"{ours}/loot_table/blocks/{block}.json"):
+            fail(f"block {block} has no loot table, so breaking it drops nothing")
+
+
 def main() -> int:
     check_structure()
     check_json_parses()
     check_translation_keys()
     check_datapack_consistency()
+    check_worldgen_and_loot()
     missing_art = check_textures()
 
     java_count = len(java_files())
