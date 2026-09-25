@@ -26,7 +26,7 @@ public class MartialArtistRenderer extends HumanoidMobRenderer<MartialArtistEnti
 
     public MartialArtistRenderer(EntityRendererProvider.Context context) {
         super(context, new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER)), 0.5F);
-        // Armour layers, so a later milestone can equip a sect's uniform and have it show.
+        // Armour layers, so the sect robes an artist spawns in (dyed leather) actually show.
         addLayer(new HumanoidArmorLayer<>(this,
                 new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
                 new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),

@@ -107,6 +107,23 @@ class SectDefinitionsTest {
     }
 
     @Test
+    void everyShippedSectHasSomewhereToBeFound() {
+        // A sect with no territory never spawns anyone, so a survival player could never meet a
+        // teacher or join it except by command.
+        loadSects().forEach((name, sect) -> assertTrue(sect.territory().isPresent(),
+                name + " has no territory, so none of its members ever spawn"));
+    }
+
+    @Test
+    void realmRangesStayOnTheLadder() {
+        // Nine realms ship; a range past the top would silently clamp to the highest realm.
+        loadSects().forEach((name, sect) -> {
+            assertTrue(sect.realmRange().min() >= 1, name + ": realm range starts below the ladder");
+            assertTrue(sect.realmRange().max() <= 9, name + ": realm range runs past the top realm");
+        });
+    }
+
+        @Test
     void atLeastOneSectWillTakeANewCultivator() {
         // If every sect gated above the starting realm, the whole system would be invisible
         // for the first hours of play.

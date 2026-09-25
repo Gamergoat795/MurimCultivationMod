@@ -1,0 +1,10 @@
+{
+  "type": "neoforge:add_spawns",
+  "biomes": "#murimcultivation:has_martial_artists",
+  "spawners": {
+    "type": "murimcultivation:martial_artist",
+    "weight": 3,
+    "minCount": 1,
+    "maxCount": 3
+  }
+}

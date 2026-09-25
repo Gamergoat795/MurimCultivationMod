@@ -60,6 +60,16 @@ public final class RealmProgression {
         return next(registry, current).isEmpty();
     }
 
+    /**
+     * The highest realm at or below a tier, so a roll that lands in a gap a datapack left in
+     * the ladder still resolves to a real realm. Empty only below the lowest realm.
+     */
+    public static Optional<Holder.Reference<Realm>> atOrBelow(Registry<Realm> registry, int tier) {
+        return registry.holders()
+                .filter(holder -> holder.value().tier() <= tier)
+                .max(BY_TIER);
+    }
+
     /** Resolves a key to its realm, or empty if a datapack removed it out from under a save. */
     public static Optional<Realm> byKey(Registry<Realm> registry, ResourceKey<Realm> key) {
         return registry.getOptional(key);

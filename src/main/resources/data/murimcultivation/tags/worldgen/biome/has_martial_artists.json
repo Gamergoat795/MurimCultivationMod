@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "#murimcultivation:sect_territory/murim_alliance",
+    "#murimcultivation:sect_territory/demonic_cult",
+    "#murimcultivation:sect_territory/hermit_valley"
+  ]
+}

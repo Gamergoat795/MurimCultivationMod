@@ -11,5 +11,10 @@
     "inner_disciple": [
       "murimcultivation:water_walking"
     ]
+  },
+  "territory": "#murimcultivation:sect_territory/hermit_valley",
+  "realm_range": {
+    "min": 1,
+    "max": 3
   }
 }

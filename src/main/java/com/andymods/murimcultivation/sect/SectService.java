@@ -5,13 +5,17 @@ import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.system.SystemNotification;
 import com.andymods.murimcultivation.system.SystemNotifications;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.biome.Biome;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,6 +44,19 @@ public final class SectService {
 
     public static Optional<Sect> byId(Player player, ResourceLocation id) {
         return registry(player).getOptional(ResourceKey.create(MurimRegistries.SECT, id));
+    }
+
+    /**
+     * Every sect whose territory covers a biome. Read from the registry access rather than a
+     * player because it is asked at spawn time, where there is no player to ask through.
+     */
+    public static List<ResourceLocation> claimants(RegistryAccess access, Holder<Biome> biome) {
+        Registry<Sect> registry = access.registryOrThrow(MurimRegistries.SECT);
+        return registry.entrySet().stream()
+                .filter(entry -> entry.getValue().claims(biome))
+                .map(entry -> entry.getKey().location())
+                .sorted()
+                .toList();
     }
 
     /** The player's standing with a sect, as a rank. */

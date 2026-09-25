@@ -473,7 +473,21 @@ def check_worldgen_and_loot() -> None:
                 fail(f"{path}: a manual teaches {value}, which no technique JSON defines")
         walk_json(load(path), visit)
 
-    # Every block needs a model to render and a loot table to drop anything when broken.
+    # A sect's territory must exist, and must be inside the tag the spawn modifier targets, or
+    # the sect claims land where no martial artist of any sect is ever spawned.
+    union_path = f"{ours}/tags/worldgen/biome/has_martial_artists.json"
+    union = set((load(union_path) or {}).get("values", []))
+    for path in sorted(glob.glob(f"{DATA_DIR}/sect/*.json")):
+        territory = (load(path) or {}).get("territory")
+        if territory is None:
+            continue
+        if not territory.startswith("#") or not exists("tags/worldgen/biome", territory[1:]):
+            fail(f"{path}: territory {territory} is not an existing biome tag")
+        elif territory not in union:
+            fail(f"{path}: territory {territory} is missing from has_martial_artists.json, "
+                 f"so no martial artist ever spawns there")
+
+        # Every block needs a model to render and a loot table to drop anything when broken.
     for block in sorted(blocks):
         if not os.path.isfile(f"{ASSETS}/blockstates/{block}.json"):
             fail(f"block {block} has no blockstate file, so it renders as the missing model")

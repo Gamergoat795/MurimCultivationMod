@@ -16,6 +16,8 @@ import com.andymods.murimcultivation.registry.ModDataComponents;
 import com.andymods.murimcultivation.registry.ModCreativeTabs;
 import com.andymods.murimcultivation.registry.ModItems;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -23,6 +25,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import net.neoforged.neoforge.registries.DataPackRegistryEvent;
 
 @Mod(MurimCultivationMod.MODID)
@@ -62,6 +65,18 @@ public class MurimCultivationMod {
         @SubscribeEvent
         public static void registerEntityAttributes(EntityAttributeCreationEvent event) {
             event.put(ModEntities.MARTIAL_ARTIST.get(), MartialArtistEntity.createAttributes().build());
+        }
+
+        /**
+         * Where a martial artist may naturally appear. Without this the spawn the biome
+         * modifier adds would fall back to no placement rule at all, and one could spawn
+         * underwater or inside a leaf canopy.
+         */
+        @SubscribeEvent
+        public static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
+            event.register(ModEntities.MARTIAL_ARTIST.get(), SpawnPlacementTypes.ON_GROUND,
+                    Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, MartialArtistEntity::checkSpawnRules,
+                    RegisterSpawnPlacementsEvent.Operation.REPLACE);
         }
 
         @SubscribeEvent

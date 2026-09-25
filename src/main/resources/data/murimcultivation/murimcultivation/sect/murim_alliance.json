@@ -14,5 +14,10 @@
     "core_disciple": [
       "murimcultivation:sword_force"
     ]
+  },
+  "territory": "#murimcultivation:sect_territory/murim_alliance",
+  "realm_range": {
+    "min": 1,
+    "max": 4
   }
 }

@@ -14,5 +14,10 @@
     "core_disciple": [
       "murimcultivation:iron_body"
     ]
+  },
+  "territory": "#murimcultivation:sect_territory/demonic_cult",
+  "realm_range": {
+    "min": 2,
+    "max": 4
   }
 }
