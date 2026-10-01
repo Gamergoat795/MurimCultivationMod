@@ -58,11 +58,13 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * {@code /murim} — operator tooling for inspecting and forcing cultivation state.
+ * {@code /murim} — inspecting and forcing cultivation state.
  *
- * <p>This exists so that the systems built on top of it are testable without grinding: forcing a
- * realm, emptying purity to watch a breakthrough fail, or slamming a meridian shut should all be
- * one command away. Every subcommand acts on the executing player.
+ * <p>Mostly operator tooling, so the systems built on top of it are testable without grinding:
+ * forcing a realm, emptying purity to watch a breakthrough fail, or slamming a meridian shut should
+ * all be one command away. A few leaves are open to everyone — the read-only queries, and joining
+ * or leaving a sect, which {@code SectService.join} gates by realm, allegiance and standing itself.
+ * See {@link #sub}. Every subcommand acts on the executing player.
  */
 @EventBusSubscriber(modid = MurimCultivationMod.MODID)
 public final class MurimCommand {
@@ -96,18 +98,20 @@ public final class MurimCommand {
     }
 
     private static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("murim")
-                .requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS));
+        // No gate on the root: a child can only narrow its parent's requirement, never loosen it,
+        // so the gates live on the leaves. Containers (realm, quest, sect...) carry none, and
+        // Brigadier hides a container whose every child is closed to you.
+        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("murim");
 
-        root.then(Commands.literal("info").executes(MurimCommand::info));
+        root.then(sub("info", Access.ANYONE).executes(MurimCommand::info));
 
-        root.then(Commands.literal("awaken").executes(MurimCommand::awaken));
+        root.then(sub("awaken", Access.GAMEMASTER).executes(MurimCommand::awaken));
 
-        root.then(Commands.literal("reset").executes(MurimCommand::reset));
+        root.then(sub("reset", Access.GAMEMASTER).executes(MurimCommand::reset));
 
         root.then(Commands.literal("realm")
-                .then(Commands.literal("get").executes(MurimCommand::info))
-                .then(Commands.literal("set")
+                .then(sub("get", Access.ANYONE).executes(MurimCommand::info))
+                .then(sub("set", Access.GAMEMASTER)
                         .then(Commands.argument("realm", ResourceLocationArgument.id())
                                 .suggests(REALM_SUGGESTIONS)
                                 .executes(context -> setRealm(context, Substage.EARLY))
@@ -117,77 +121,77 @@ public final class MurimCommand {
                                                 builder))
                                         .executes(context -> setRealm(context, readSubstage(context)))))));
 
-        root.then(Commands.literal("qi")
+        root.then(sub("qi", Access.GAMEMASTER)
                 .then(Commands.argument("amount", DoubleArgumentType.doubleArg(0.0D))
                         .executes(MurimCommand::setQi)));
 
-        root.then(Commands.literal("progress")
+        root.then(sub("progress", Access.GAMEMASTER)
                 .then(Commands.argument("amount", DoubleArgumentType.doubleArg(0.0D))
                         .executes(MurimCommand::setProgress)));
 
-        root.then(Commands.literal("purity")
+        root.then(sub("purity", Access.GAMEMASTER)
                 .then(Commands.argument("amount", DoubleArgumentType.doubleArg(
                                 CultivationData.MIN_PURITY, CultivationData.MAX_PURITY))
                         .executes(MurimCommand::setPurity)));
 
         root.then(Commands.literal("meridian")
-                .then(Commands.literal("open")
+                .then(sub("open", Access.GAMEMASTER)
                         .then(Commands.argument("meridian", StringArgumentType.word())
                                 .suggests(MERIDIAN_SUGGESTIONS)
                                 .executes(context -> setMeridian(context, true))))
-                .then(Commands.literal("close")
+                .then(sub("close", Access.GAMEMASTER)
                         .then(Commands.argument("meridian", StringArgumentType.word())
                                 .suggests(MERIDIAN_SUGGESTIONS)
                                 .executes(context -> setMeridian(context, false))))
-                .then(Commands.literal("openall").executes(MurimCommand::openAllMeridians)));
+                .then(sub("openall", Access.GAMEMASTER).executes(MurimCommand::openAllMeridians)));
 
-        root.then(Commands.literal("breakthrough").executes(MurimCommand::forceBreakthroughCheck));
+        root.then(sub("breakthrough", Access.GAMEMASTER).executes(MurimCommand::forceBreakthroughCheck));
 
-        root.then(Commands.literal("chance").executes(MurimCommand::showBreakthroughChance));
+        root.then(sub("chance", Access.ANYONE).executes(MurimCommand::showBreakthroughChance));
 
         root.then(Commands.literal("quest")
-                .then(Commands.literal("list").executes(MurimCommand::listQuests))
-                .then(Commands.literal("complete")
+                .then(sub("list", Access.ANYONE).executes(MurimCommand::listQuests))
+                .then(sub("complete", Access.GAMEMASTER)
                         .then(Commands.argument("quest", ResourceLocationArgument.id())
                                 .suggests(QUEST_SUGGESTIONS)
                                 .executes(MurimCommand::completeQuest)))
-                .then(Commands.literal("reset").executes(MurimCommand::resetQuests)));
+                .then(sub("reset", Access.GAMEMASTER).executes(MurimCommand::resetQuests)));
 
         root.then(Commands.literal("stat")
-                .then(Commands.literal("grant")
+                .then(sub("grant", Access.GAMEMASTER)
                         .then(Commands.argument("points", IntegerArgumentType.integer(1, 10000))
                                 .executes(MurimCommand::grantStatPoints)))
-                .then(Commands.literal("spend")
+                .then(sub("spend", Access.GAMEMASTER)
                         .then(Commands.argument("stat", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
                                         Arrays.stream(StatType.values()).map(StatType::getSerializedName),
                                         builder))
                                 .then(Commands.argument("points", IntegerArgumentType.integer(1, 100))
                                         .executes(MurimCommand::spendStatPoints))))
-                .then(Commands.literal("respec").executes(MurimCommand::respec)));
+                .then(sub("respec", Access.GAMEMASTER).executes(MurimCommand::respec)));
 
         root.then(Commands.literal("technique")
-                .then(Commands.literal("learn")
+                .then(sub("learn", Access.GAMEMASTER)
                         .then(Commands.argument("technique", ResourceLocationArgument.id())
                                 .suggests(TECHNIQUE_SUGGESTIONS)
                                 .executes(MurimCommand::learnTechnique)))
-                .then(Commands.literal("forget")
+                .then(sub("forget", Access.GAMEMASTER)
                         .then(Commands.argument("technique", ResourceLocationArgument.id())
                                 .suggests(TECHNIQUE_SUGGESTIONS)
                                 .executes(MurimCommand::forgetTechnique)))
-                .then(Commands.literal("mastery")
+                .then(sub("mastery", Access.GAMEMASTER)
                         .then(Commands.argument("technique", ResourceLocationArgument.id())
                                 .suggests(TECHNIQUE_SUGGESTIONS)
                                 .then(Commands.argument("value", IntegerArgumentType.integer(0, 100))
                                         .executes(MurimCommand::setTechniqueMastery))))
-                .then(Commands.literal("manual")
+                .then(sub("manual", Access.GAMEMASTER)
                         .then(Commands.argument("technique", ResourceLocationArgument.id())
                                 .suggests(TECHNIQUE_SUGGESTIONS)
                                 .executes(MurimCommand::giveManual)))
-                .then(Commands.literal("learnall").executes(MurimCommand::learnAllTechniques))
-                .then(Commands.literal("list").executes(MurimCommand::listTechniques)));
+                .then(sub("learnall", Access.GAMEMASTER).executes(MurimCommand::learnAllTechniques))
+                .then(sub("list", Access.ANYONE).executes(MurimCommand::listTechniques)));
 
-        root.then(Commands.literal("deviate")
+        root.then(sub("deviate", Access.GAMEMASTER)
                 .then(Commands.argument("severity", StringArgumentType.word())
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
                                 Arrays.stream(DeviationSeverity.values())
@@ -195,34 +199,56 @@ public final class MurimCommand {
                                 builder))
                         .executes(MurimCommand::inflictDeviation)));
 
-        root.then(Commands.literal("cure").executes(MurimCommand::cureDeviation));
+        root.then(sub("cure", Access.GAMEMASTER).executes(MurimCommand::cureDeviation));
 
-        root.then(Commands.literal("standing")
-                .then(Commands.literal("honour")
+        root.then(sub("standing", Access.ANYONE)
+                .then(sub("honour", Access.GAMEMASTER)
                         .then(Commands.argument("amount", IntegerArgumentType.integer(-100, 100))
                                 .executes(context -> moveStanding(context, true))))
-                .then(Commands.literal("infamy")
+                .then(sub("infamy", Access.GAMEMASTER)
                         .then(Commands.argument("amount", IntegerArgumentType.integer(-100, 100))
                                 .executes(context -> moveStanding(context, false))))
                 .executes(MurimCommand::showStanding));
 
         root.then(Commands.literal("sect")
-                .then(Commands.literal("list").executes(MurimCommand::listSects))
-                .then(Commands.literal("join")
+                .then(sub("list", Access.ANYONE).executes(MurimCommand::listSects))
+                .then(sub("join", Access.ANYONE)
                         .then(Commands.argument("sect", ResourceLocationArgument.id())
                                 .suggests(SECT_SUGGESTIONS)
                                 .executes(MurimCommand::joinSect)))
-                .then(Commands.literal("leave")
+                .then(sub("leave", Access.ANYONE)
                         .then(Commands.argument("sect", ResourceLocationArgument.id())
                                 .suggests(SECT_SUGGESTIONS)
                                 .executes(MurimCommand::leaveSect)))
-                .then(Commands.literal("reputation")
+                .then(sub("reputation", Access.GAMEMASTER)
                         .then(Commands.argument("sect", ResourceLocationArgument.id())
                                 .suggests(SECT_SUGGESTIONS)
                                 .then(Commands.argument("amount", IntegerArgumentType.integer(-100000, 100000))
                                         .executes(MurimCommand::addSectReputation)))));
 
         dispatcher.register(root);
+    }
+
+    /** Who may run a leaf. */
+    private enum Access {
+        /** Reads your own state, or asks for something the service itself gates. */
+        ANYONE,
+        /** Sets state directly. A cheat in survival, so operators only. */
+        GAMEMASTER
+    }
+
+    /**
+     * Every executable node is built here, and the access level is a required argument.
+     *
+     * <p>That is the whole protection. Brigadier's default requirement is allow-all, so a leaf whose
+     * gate was forgotten would not fail closed — it would hand every player {@code /murim realm
+     * set}. Making the classification a parameter turns forgetting it into a compile error.
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> sub(String name, Access access) {
+        LiteralArgumentBuilder<CommandSourceStack> node = Commands.literal(name);
+        return access == Access.ANYONE
+                ? node
+                : node.requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS));
     }
 
     // --- Subcommands ------------------------------------------------------------------
@@ -690,9 +716,8 @@ public final class MurimCommand {
             SectRank rank = SectRank.forReputation(reputation);
             SectRank next = rank.next();
             String toNext = next == null ? "" : " (next at " + next.reputationRequired() + ")";
-            // Report the standing verdict rather than enforcing it: honour is not earnable in
-            // play until duels land, and refusing a sect for a number nothing can move yet would
-            // be a regression dressed as a feature.
+            // The verdict join would reach on standing alone, so a player can see why a sect
+            // would refuse them before asking.
             StandingService.Verdict verdict =
                     StandingService.judge(sect.alignment(), data.standing(), StandingService.Tuning.fromConfig());
             send(context, Component.literal(String.format(Locale.ROOT, "  %s [%s]  rep %s, %s%s  standing: %s",
@@ -717,7 +742,7 @@ public final class MurimCommand {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ResourceLocation id = ResourceLocationArgument.getId(context, "sect");
         boolean left = SectService.leave(player, id);
-        send(context, Component.literal(left ? "Left " + id : "No standing with " + id));
+        send(context, Component.literal(left ? "Left " + id : "Not a member of " + id));
         return left ? 1 : 0;
     }
 

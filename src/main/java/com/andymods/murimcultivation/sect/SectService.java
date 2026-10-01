@@ -151,7 +151,9 @@ public final class SectService {
     public static boolean leave(ServerPlayer player, ResourceLocation id) {
         CultivationData data = CultivationService.data(player);
         int standing = data.sectReputation(id);
-        if (standing <= 0) {
+        // Membership, not merely positive standing: regard earned from outside a sect is not
+        // something to "leave", and wiping it would only be a way to lose it by accident.
+        if (!isMemberOf(player, id)) {
             return false;
         }
 
