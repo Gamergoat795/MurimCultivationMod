@@ -133,6 +133,47 @@ jobs:
               print()
           PY
 
+      # The one gate a unit test cannot provide: does the mod load on a DEDICATED server, where no
+      # client class exists? A method reference to ClientPayloadHandler in common code compiles,
+      # passes every test, and then kills the server with NoClassDefFoundError at startup. Nothing
+      # else in CI can see that, so this boots a real headless server and waits for "Done (".
+      #
+      # Polled rather than run under a fixed timeout, because a server never exits on its own and
+      # a timeout would spend its whole budget on every green build. Fails on the specific
+      # symptoms first so a red run says why without anyone opening a 2000-line log.
+      - name: Dedicated server smoke test
+        run: |
+          mkdir -p run
+          echo "eula=true" > run/eula.txt
+          setsid ./gradlew runServer --console=plain --no-daemon > server-output.txt 2>&1 &
+          server_pid=$!
+
+          status=timeout
+          for _ in $(seq 1 150); do
+            if grep -q "Done (" server-output.txt; then status=up; break; fi
+            if grep -qE "NoClassDefFoundError|ClassNotFoundException|Mod Loading has failed|Failed to start the minecraft server" server-output.txt; then status=crashed; break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then status=exited; break; fi
+            sleep 2
+          done
+
+          # setsid made the wrapper a process-group leader, so this takes the forked JVM down too.
+          kill -TERM -- "-$server_pid" 2>/dev/null || true
+          sleep 3
+          kill -KILL -- "-$server_pid" 2>/dev/null || true
+
+          if [ "$status" = up ]; then
+            grep -m1 "Done (" server-output.txt
+            echo "Dedicated server started cleanly."
+            exit 0
+          fi
+
+          echo "::error::Dedicated server did not start ($status)."
+          echo "--- client-class leaks and loading errors ---"
+          grep -nE "NoClassDefFoundError|ClassNotFoundException|Mod Loading has failed|Caused by" server-output.txt | head -30 || true
+          echo "--- last 80 lines ---"
+          tail -80 server-output.txt
+          exit 1
+
       - name: Upload jar
         if: success()
         uses: actions/upload-artifact@v4
