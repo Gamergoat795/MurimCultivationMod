@@ -3,10 +3,12 @@ package com.andymods.murimcultivation.world;
 import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -37,14 +39,14 @@ public final class QiSources {
     public static final int VEIN_HEIGHT = 3;
 
     /** How long a count stays good for, in ticks. */
-    private static final long CACHE_TICKS = 20L;
+    static final long CACHE_TICKS = 20L;
 
     /**
      * Bounded so a server with many players cannot grow it without limit. Concurrent because
      * the server thread and the client render thread both call in.
      */
-    private static final int CACHE_CAPACITY = 256;
-    private static final Map<Long, CachedCount> CACHE = new ConcurrentHashMap<>();
+    static final int CACHE_CAPACITY = 256;
+    private static final Map<CacheKey, CachedCount> CACHE = new ConcurrentHashMap<>();
 
     private QiSources() {
     }
@@ -64,33 +66,56 @@ public final class QiSources {
         return 1.0D + MurimConfig.spiritVeinBonus() * Math.sqrt(veins);
     }
 
-    public static boolean isNearVein(Level level, BlockPos pos) {
-        return countVeinsCached(level, pos) > 0;
-    }
-
-    /** Drops the cache. Called on world unload so a new world cannot read a stale count. */
-    public static void invalidate() {
-        CACHE.clear();
+    /**
+     * Drops one side's cached counts for one dimension. Called when that level unloads, so a world
+     * loaded afterwards cannot read a count that belonged to the one before it.
+     */
+    public static void invalidate(ResourceKey<Level> dimension, boolean clientSide) {
+        CACHE.keySet().removeIf(key -> key.dimension().equals(dimension) && key.clientSide() == clientSide);
     }
 
     private static int countVeinsCached(Level level, BlockPos pos) {
         long tick = level.getGameTime();
-        // Quantise the key so a walking player reuses a neighbour's entry instead of thrashing.
-        long key = BlockPos.asLong(pos.getX() >> 2, pos.getY() >> 2, pos.getZ() >> 2);
+        CacheKey key = CacheKey.of(level.dimension(), level.isClientSide(), pos);
 
-        CachedCount cached = CACHE.get(key);
-        if (cached != null && tick - cached.tick() < CACHE_TICKS) {
-            return cached.count();
-        }
-
-        if (CACHE.size() > CACHE_CAPACITY) {
-            // Cheap eviction: the entries are all short-lived, so clearing costs one rescan.
-            CACHE.clear();
+        OptionalInt cached = cached(key, tick);
+        if (cached.isPresent()) {
+            return cached.getAsInt();
         }
 
         int counted = countVeins(level, pos);
-        CACHE.put(key, new CachedCount(tick, counted));
+        store(key, tick, counted);
         return counted;
+    }
+
+    /**
+     * A fresh cached count, or empty.
+     *
+     * <p>Fresh means {@code 0 <= elapsed < CACHE_TICKS}, and the lower bound is not decoration.
+     * Game time is per-level and per-world, so leaving one singleplayer world and loading an older
+     * one meets an entry stamped in the future. Without the bound that reads as a negative age,
+     * negative is less than twenty, and the stale count is served indefinitely.
+     */
+    static OptionalInt cached(CacheKey key, long tick) {
+        CachedCount entry = CACHE.get(key);
+        if (entry == null) {
+            return OptionalInt.empty();
+        }
+        long elapsed = tick - entry.tick();
+        return elapsed >= 0 && elapsed < CACHE_TICKS ? OptionalInt.of(entry.count()) : OptionalInt.empty();
+    }
+
+    static void store(CacheKey key, long tick, int count) {
+        if (CACHE.size() >= CACHE_CAPACITY) {
+            // Cheap eviction: the entries are all short-lived, so clearing costs one rescan.
+            CACHE.clear();
+        }
+        CACHE.put(key, new CachedCount(tick, count));
+    }
+
+    /** Test hook: a clean slate between cases, since the cache is static. */
+    static void clearAll() {
+        CACHE.clear();
     }
 
     private static int countVeins(LevelReader level, BlockPos centre) {
@@ -107,6 +132,25 @@ public final class QiSources {
             }
         }
         return found;
+    }
+
+    /**
+     * Where a count was taken: dimension, side and a quantised cell.
+     *
+     * <p>All three are needed. Without the dimension, two players at the same coordinates in the
+     * Overworld and the Nether share a count — and the 8:1 coordinate scale makes that routine near
+     * the origin. Without the side, singleplayer's client and integrated server write over each
+     * other, because a dimension's key is identical on both. Kept as a record rather than packed
+     * into a long, since packing would mean hashing the dimension and a hash collision would
+     * bring back exactly the bug this exists to prevent.
+     */
+    record CacheKey(ResourceKey<Level> dimension, boolean clientSide, long cell) {
+
+        /** Quantised so a walking player reuses a neighbour's entry instead of thrashing. */
+        static CacheKey of(ResourceKey<Level> dimension, boolean clientSide, BlockPos pos) {
+            return new CacheKey(dimension, clientSide,
+                    BlockPos.asLong(pos.getX() >> 2, pos.getY() >> 2, pos.getZ() >> 2));
+        }
     }
 
     /** How many veins were counted near a quantised position, and when. */
