@@ -1,5 +1,6 @@
 package com.andymods.murimcultivation.client.hud;
 
+import com.andymods.murimcultivation.client.screen.SystemTheme;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.Realm;
@@ -120,7 +121,7 @@ public class CultivationHudLayer implements LayeredDraw.Layer {
             guiGraphics.fill(x + 1, y + QI_BAR_HEIGHT - 1 - fillHeight,
                     x + QI_BAR_WIDTH - 1, y + QI_BAR_HEIGHT - 1, COLOR_QI);
         }
-        drawBorder(guiGraphics, x, y, QI_BAR_WIDTH, QI_BAR_HEIGHT, COLOR_BORDER);
+        SystemTheme.border(guiGraphics, x, y, QI_BAR_WIDTH, QI_BAR_HEIGHT, COLOR_BORDER);
 
         Component qiText = Component.literal(format(data.qi()) + "/" + format(capacity));
         guiGraphics.drawString(minecraft.font, qiText,
@@ -160,13 +161,6 @@ public class CultivationHudLayer implements LayeredDraw.Layer {
         if (filled > 0) {
             guiGraphics.fill(x, barY, x + filled, barY + PROGRESS_BAR_HEIGHT, color);
         }
-    }
-
-    private void drawBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int color) {
-        guiGraphics.fill(x, y, x + width, y + 1, color);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, color);
-        guiGraphics.fill(x, y, x + 1, y + height, color);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, color);
     }
 
     private static double fraction(double value, double max) {

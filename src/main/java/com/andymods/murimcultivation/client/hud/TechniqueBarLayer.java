@@ -1,5 +1,6 @@
 package com.andymods.murimcultivation.client.hud;
 
+import com.andymods.murimcultivation.client.screen.SystemTheme;
 import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.client.KeyBindings;
 import com.andymods.murimcultivation.cultivation.CultivationData;
@@ -79,7 +80,7 @@ public class TechniqueBarLayer implements LayeredDraw.Layer {
 
         guiGraphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE, COLOR_SLOT_BACKDROP);
         boolean selected = slot == data.selectedSlot() && bound.isPresent();
-        drawBorder(guiGraphics, x, y, SLOT_SIZE, SLOT_SIZE,
+        SystemTheme.border(guiGraphics, x, y, SLOT_SIZE, SLOT_SIZE,
                 selected ? COLOR_SLOT_SELECTED : COLOR_SLOT_BORDER);
 
         // The slot number, which is what the System window and the learn message name it by.
@@ -163,12 +164,5 @@ public class TechniqueBarLayer implements LayeredDraw.Layer {
             builder.append(i < filled ? '★' : '☆');
         }
         return builder.toString();
-    }
-
-    private void drawBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int color) {
-        guiGraphics.fill(x, y, x + width, y + 1, color);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, color);
-        guiGraphics.fill(x, y, x + 1, y + height, color);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, color);
     }
 }

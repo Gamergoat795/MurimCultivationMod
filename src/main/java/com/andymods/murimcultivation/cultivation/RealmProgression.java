@@ -56,10 +56,6 @@ public final class RealmProgression {
                 .max(BY_TIER);
     }
 
-    public static boolean isHighest(Registry<Realm> registry, Realm current) {
-        return next(registry, current).isEmpty();
-    }
-
     /** Resolves a key to its realm, or empty if a datapack removed it out from under a save. */
     public static Optional<Realm> byKey(Registry<Realm> registry, ResourceKey<Realm> key) {
         return registry.getOptional(key);

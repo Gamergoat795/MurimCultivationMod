@@ -4,7 +4,6 @@ import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.CultivationData;
 import com.andymods.murimcultivation.cultivation.CultivationService;
-import com.andymods.murimcultivation.cultivation.Meridian;
 import com.andymods.murimcultivation.cultivation.Realm;
 import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.registry.ModItems;
@@ -268,10 +267,5 @@ public final class QuestTracker {
             SystemNotifications.send(player, SystemNotification.dailiesReset());
             CultivationService.syncToClient(player);
         }
-    }
-
-    /** Total meridians, for the System screen's objective descriptions. */
-    public static int meridianCount() {
-        return Meridian.count();
     }
 }

@@ -1,5 +1,6 @@
 package com.andymods.murimcultivation.client.hud;
 
+import com.andymods.murimcultivation.client.screen.SystemTheme;
 import com.andymods.murimcultivation.system.SystemNotification;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -93,7 +94,7 @@ public class SystemToastLayer implements LayeredDraw.Layer {
         // A coloured spine on the left instead of an icon: no new art needed, and it still
         // distinguishes a reward from a warning at a glance.
         guiGraphics.fill(x, y, x + 2, y + HEIGHT, accent);
-        drawBorder(guiGraphics, x, y, WIDTH, HEIGHT, accent);
+        SystemTheme.border(guiGraphics, x, y, WIDTH, HEIGHT, accent);
 
         guiGraphics.drawString(minecraft.font, entry.notification.title(), x + 7, y + 5, text, true);
         if (!entry.notification.detail().getString().isEmpty()) {
@@ -109,12 +110,6 @@ public class SystemToastLayer implements LayeredDraw.Layer {
             case REWARD -> 0xA5D6A7;
             case WARNING -> 0xFF6B6B;
         };
-    }
-
-    private void drawBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int color) {
-        guiGraphics.fill(x, y, x + width, y + 1, color);
-        guiGraphics.fill(x, y + height - 1, x + width, y + height, color);
-        guiGraphics.fill(x + width - 1, y, x + width, y + height, color);
     }
 
     private static final class Entry {
