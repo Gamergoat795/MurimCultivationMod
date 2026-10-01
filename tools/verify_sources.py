@@ -101,6 +101,48 @@ def check_structure() -> None:
         for name in sorted(qualified):
             fail(f"{path}: fully-qualified {name} used inline; import it instead")
 
+        check_dist_boundary(path, raw, stripped)
+
+
+# Client-only packages. Common code that names one of these is linked on the dedicated server,
+# where the class does not exist, and the server dies at startup with NoClassDefFoundError.
+CLIENT_PACKAGES = ("net.minecraft.client.", "net.neoforged.neoforge.client.",
+                   f"{INTERNAL_PACKAGE}client.")
+CLIENT_ONLY_MARKER = re.compile(r"@OnlyIn\(\s*Dist\.CLIENT\s*\)|value\s*=\s*Dist\.CLIENT")
+
+
+def check_dist_boundary(path: str, raw: str, stripped: str) -> None:
+    """Keep client classes out of code the dedicated server loads.
+
+    Runs on comment-stripped source, because ModPayloads documents its own rule in a comment that
+    names the exact method reference it forbids.
+    """
+    if not path.startswith("src/main/java/"):
+        return
+    in_client_package = f"/{MODID}/client/" in path
+    marked_client_only = CLIENT_ONLY_MARKER.search(stripped) is not None
+
+    if not in_client_package and not marked_client_only:
+        for imported in re.findall(r"^import\s+(?:static\s+)?([\w.]+);", raw, re.M):
+            if not imported.startswith(CLIENT_PACKAGES):
+                continue
+            # The one sanctioned crossing: ModPayloads names the client handler, and is safe only
+            # because every use sits inside a lambda body (checked below).
+            if imported == f"{INTERNAL_PACKAGE}client.ClientPayloadHandler" \
+                    and path.endswith("/network/ModPayloads.java"):
+                continue
+            fail(f"{path}: imports client-only {imported} outside client/ without "
+                 f"@OnlyIn(Dist.CLIENT); this crashes a dedicated server")
+        if re.search(r"\bMinecraft\s*\.\s*getInstance\s*\(", stripped):
+            fail(f"{path}: Minecraft.getInstance() outside client/ without @OnlyIn(Dist.CLIENT)")
+
+    # A method reference is resolved when the line runs, on the server too. Only a lambda defers
+    # loading the client class until the body executes, which only ever happens on a client.
+    for ref in re.findall(r"\bClientPayloadHandler\s*::\s*\w+", stripped):
+        if not in_client_package:
+            fail(f"{path}: {ref} is a method reference to a client class; wrap it in a lambda, "
+                 f"or the dedicated server crashes with NoClassDefFoundError")
+
 
 def enum_ids(path: str) -> list[str]:
     """The serialized names of a StringRepresentable enum, e.g. LUNG("lung") -> lung."""
