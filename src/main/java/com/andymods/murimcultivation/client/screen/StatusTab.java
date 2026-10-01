@@ -7,6 +7,7 @@ import com.andymods.murimcultivation.cultivation.Realm;
 import com.andymods.murimcultivation.cultivation.RealmProgression;
 import com.andymods.murimcultivation.network.EquipTitlePayload;
 import com.andymods.murimcultivation.network.SpendStatPointPayload;
+import com.andymods.murimcultivation.standing.MurimStanding;
 import com.andymods.murimcultivation.system.StatType;
 import com.andymods.murimcultivation.system.Title;
 import net.minecraft.client.Minecraft;
@@ -78,7 +79,27 @@ public class StatusTab implements SystemTab {
                 data.purity(), CultivationData.MAX_PURITY, SystemTheme.TEXT_GOOD);
 
         renderStats(graphics, minecraft, data, area, y + 4, mouseX, mouseY);
+        renderStanding(graphics, minecraft, data, area);
         renderTitles(graphics, minecraft, data, area);
+    }
+
+    /**
+     * Honour and infamy, under the stats.
+     *
+     * <p>Until this existed the only way to read either number was an operator command, so a player
+     * could be refused by a sect for a value they had no way to see. Two bars rather than one axis,
+     * matching the model: respected and feared are different things and you can be both.
+     */
+    private void renderStanding(GuiGraphics graphics, Minecraft minecraft, CultivationData data, Area area) {
+        int x = area.x() + area.width() / 2 + 6;
+        int width = area.width() / 2 - 6;
+        int y = area.y() + ROW + 2 + StatType.values().length * STAT_ROW + 6;
+        y = drawValueBar(graphics, minecraft, x, y, width,
+                Component.translatable("murimcultivation.system.status.honour"),
+                data.standing().honour(), MurimStanding.MAX, SystemTheme.TEXT_GOOD);
+        drawValueBar(graphics, minecraft, x, y, width,
+                Component.translatable("murimcultivation.system.status.infamy"),
+                data.standing().infamy(), MurimStanding.MAX, SystemTheme.TEXT_BAD);
     }
 
     private int drawValueBar(GuiGraphics graphics, Minecraft minecraft, int x, int y, int width,

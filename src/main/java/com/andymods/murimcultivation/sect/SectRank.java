@@ -61,6 +61,19 @@ public enum SectRank implements StringRepresentable {
         return earned;
     }
 
+    /**
+     * How much of a gain an outsider may keep: enough to climb to just short of membership, and no
+     * further. Losses always apply in full, and a gain never turns into a loss when someone is
+     * already above the ceiling.
+     */
+    public static int regardGain(int current, int amount) {
+        if (amount <= 0) {
+            return amount;
+        }
+        int ceiling = OUTER_DISCIPLE.reputationRequired() - 1;
+        return Math.max(0, Math.min(amount, ceiling - current));
+    }
+
     /** The next rank up, or empty at the top. */
     public SectRank next() {
         return ordinal() + 1 < BY_ORDINAL.length ? BY_ORDINAL[ordinal() + 1] : null;

@@ -89,6 +89,7 @@ public final class MurimConfig {
         private final ModConfigSpec.IntValue standingOrthodoxInfamyLimit;
         private final ModConfigSpec.IntValue standingDemonicInfamyRequired;
         private final ModConfigSpec.BooleanValue warriorNaturalSpawns;
+        private final ModConfigSpec.IntValue warriorMaxNearby;
         private final ModConfigSpec.IntValue warriorQiRichPressure;
         private final ModConfigSpec.IntValue warriorNeutralPressure;
         private final ModConfigSpec.IntValue warriorQiBarrenPressure;
@@ -496,6 +497,14 @@ public final class MurimConfig {
                             "wandering_warriors.json, because a biome modifier cannot read config.")
                     .define("naturalSpawns", true);
 
+            warriorMaxNearby = builder
+                    .comment("A natural spawn is refused when this many warriors are already within",
+                            "48 blocks. They share the monster spawn cycle but, unlike zombies, may",
+                            "appear in daylight -- so on a sunny day they are the only monster that",
+                            "can spawn on the surface, and without this they would fill the whole",
+                            "monster cap. The road should have a stranger on it, not a crowd.")
+                    .defineInRange("maxNearby", 2, 1, 64);
+
             warriorQiRichPressure = builder
                     .comment("Pressure floor in a biome tagged #murimcultivation:qi_rich. Higher than",
                             "neutral because warriors train where the Qi is good, so the bamboo",
@@ -861,6 +870,10 @@ public final class MurimConfig {
 
     public static boolean warriorNaturalSpawns() {
         return VALUES.warriorNaturalSpawns.get();
+    }
+
+    public static int warriorMaxNearby() {
+        return VALUES.warriorMaxNearby.get();
     }
 
     public static int warriorQiRichPressure() {

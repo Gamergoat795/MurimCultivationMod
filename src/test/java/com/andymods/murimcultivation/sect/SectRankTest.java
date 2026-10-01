@@ -113,4 +113,37 @@ class SectRankTest {
                     alignment.getSerializedName());
         }
     }
+
+    // --- Regard: standing earned from outside a sect --------------------------------------
+
+    @Test
+    void anOutsiderClimbsToJustShortOfMembershipAndNoFurther() {
+        int ceiling = SectRank.OUTER_DISCIPLE.reputationRequired() - 1;
+
+        assertEquals(25, SectRank.regardGain(0, 25));
+        assertEquals(24, SectRank.regardGain(75, 25), "trimmed to land exactly on the ceiling");
+        assertEquals(0, SectRank.regardGain(ceiling, 25));
+
+        // Four honourable duels at the default 25 used to make you a member. Walk it.
+        int reputation = 0;
+        for (int duel = 0; duel < 10; duel++) {
+            reputation += SectRank.regardGain(reputation, 25);
+        }
+        assertEquals(ceiling, reputation);
+        assertFalse(SectRank.forReputation(reputation).isMember());
+    }
+
+    @Test
+    void regardNeverTurnsAGainIntoALoss() {
+        // Someone already above the ceiling - say, a former member's leftovers set by command -
+        // gains nothing, but is not dragged down by a win either.
+        assertEquals(0, SectRank.regardGain(500, 25));
+    }
+
+    @Test
+    void lossesApplyInFull() {
+        assertEquals(-50, SectRank.regardGain(10, -50));
+        assertEquals(-50, SectRank.regardGain(-200, -50), "negative standing is allowed to deepen");
+        assertEquals(0, SectRank.regardGain(10, 0));
+    }
 }

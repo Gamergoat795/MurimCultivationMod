@@ -11,6 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -24,7 +25,6 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -44,6 +44,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.phys.AABB;
 
 import java.util.Comparator;
 import java.util.List;
@@ -75,6 +76,18 @@ public class WanderingWarriorEntity extends PathfinderMob {
     private static final String TIER_TAG = "Tier";
     private static final String SECT_TAG = "Sect";
 
+    /** Vanilla's own key for saved health, read back after the realm's grants are reapplied. */
+    private static final String HEALTH_TAG = "Health";
+
+    /** How far a natural spawn looks for other warriors before refusing to crowd them. */
+    private static final double CROWDING_RADIUS = 48.0D;
+
+    /**
+     * How far a duel opponent may get before the duel is over. Past this they have walked away,
+     * and a warrior left holding a duel with someone gone would refuse every other challenger.
+     */
+    private static final double DUEL_LEASH_SQR = 32.0D * 32.0D;
+
     /** Keyed by the same string the modifier helpers use, so it cannot collide with a player's. */
     private static final String MODIFIER_SOURCE = "warrior_realm";
 
@@ -94,6 +107,9 @@ public class WanderingWarriorEntity extends PathfinderMob {
     private UUID duelOpponent;
     private int truceTicks;
     private boolean yielded;
+
+    /** Set by the first blow against it while yielded, so later blows are not each a new ambush. */
+    private boolean struckWhileYielded;
 
     public WanderingWarriorEntity(EntityType<? extends WanderingWarriorEntity> type, Level level) {
         super(type, level);
@@ -168,7 +184,8 @@ public class WanderingWarriorEntity extends PathfinderMob {
         this.duelOpponent = opponent.getUUID();
         this.truceTicks = 0;
         this.yielded = false;
-        setTarget(opponent instanceof LivingEntity living ? living : null);
+        this.struckWhileYielded = false;
+        setTarget(opponent);
     }
 
     /**
@@ -182,8 +199,38 @@ public class WanderingWarriorEntity extends PathfinderMob {
         this.duelOpponent = null;
         this.truceTicks = Math.max(0, ticks);
         this.yielded = yielded;
+        this.struckWhileYielded = false;
         setTarget(null);
         setLastHurtByMob(null);
+    }
+
+    /**
+     * An unprovoked blow from someone this warrior was not fighting. Returns whether it counts as
+     * a fresh ambush, and is the one place that decides how the warrior reacts.
+     *
+     * <p>Without this, every blow during a truce counted separately: the truce clears the target
+     * each tick, so the "has it already got a target?" test the caller relies on never stopped
+     * passing, and ten swings at a warrior who had spared you cost ten ambushes.
+     *
+     * <ul>
+     *   <li>Yielded: it keeps its guard down — killing it stays the worst act available — but only
+     *       the first blow is counted.</li>
+     *   <li>Otherwise, including a warrior that has just spared you: the truce is over, it turns on
+     *       the attacker, and having a target means later blows are part of the fight.</li>
+     * </ul>
+     */
+    public boolean provoke(Player attacker) {
+        if (hasYielded()) {
+            if (struckWhileYielded) {
+                return false;
+            }
+            struckWhileYielded = true;
+            return true;
+        }
+        truceTicks = 0;
+        yielded = false;
+        setTarget(attacker);
+        return true;
     }
 
     public void setSectId(Optional<ResourceLocation> sect) {
@@ -261,6 +308,12 @@ public class WanderingWarriorEntity extends PathfinderMob {
     @Override
     protected void customServerAiStep() {
         super.customServerAiStep();
+        if (duelOpponent != null && !opponentStillPresent()) {
+            // They died to something else, changed dimension, logged out or walked away. No
+            // standing moves: nobody yielded, and leaving is not misconduct.
+            duelOpponent = null;
+            setTarget(null);
+        }
         if (truceTicks > 0) {
             truceTicks--;
             setTarget(null);
@@ -268,8 +321,17 @@ public class WanderingWarriorEntity extends PathfinderMob {
             if (truceTicks == 0) {
                 // Recovered. It will fight again if provoked, and is no longer a defenceless kill.
                 yielded = false;
+                struckWhileYielded = false;
             }
         }
+    }
+
+    private boolean opponentStillPresent() {
+        Player opponent = level().getPlayerByUUID(duelOpponent);
+        return opponent != null
+                && opponent.isAlive()
+                && !opponent.isSpectator()
+                && distanceToSqr(opponent) <= DUEL_LEASH_SQR;
     }
 
     // --- Spawning ---------------------------------------------------------------------
@@ -289,8 +351,16 @@ public class WanderingWarriorEntity extends PathfinderMob {
         if (!MurimConfig.warriorNaturalSpawns()) {
             return false;
         }
-        return level.getDifficulty() != Difficulty.PEACEFUL
-                && Mob.checkMobSpawnRules(type, level, spawnType, pos, random);
+        if (level.getDifficulty() == Difficulty.PEACEFUL
+                || !Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) {
+            return false;
+        }
+        // Natural spawns only: an egg or a spawner placed on purpose should do what it was asked.
+        if (spawnType != MobSpawnType.NATURAL && spawnType != MobSpawnType.CHUNK_GENERATION) {
+            return true;
+        }
+        return level.getEntitiesOfClass(WanderingWarriorEntity.class,
+                new AABB(pos).inflate(CROWDING_RADIUS)).size() < MurimConfig.warriorMaxNearby();
     }
 
     @Override
@@ -423,9 +493,13 @@ public class WanderingWarriorEntity extends PathfinderMob {
         }
         if (tag.contains(REALM_TIER_TAG)) {
             // Re-applies the realm's grants, because they are transient modifiers and so were not
-            // saved. Health is deliberately left alone: the realm has not changed, so the maximum
-            // is the same one the saved health was already within.
+            // saved. That ordering is a trap: the superclass has already restored health, clamped
+            // to the bare base maximum because the grants were not there yet, so every high-realm
+            // warrior reloaded at twenty health. Restore it again now that the maximum is right.
             setRealmTier(tag.getInt(REALM_TIER_TAG));
+            if (tag.contains(HEALTH_TAG, Tag.TAG_ANY_NUMERIC)) {
+                setHealth(tag.getFloat(HEALTH_TAG));
+            }
         }
     }
 }

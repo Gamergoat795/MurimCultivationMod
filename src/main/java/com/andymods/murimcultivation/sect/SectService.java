@@ -165,6 +165,19 @@ public final class SectService {
     }
 
     /**
+     * Standing earned from outside a sect: it raises regard, but never far enough to make you a
+     * member. Without this, beating four of a sect's people honourably made you an outer disciple
+     * of a sect you never asked to join — past its realm floor, its allegiance check and its
+     * standing gate, none of which {@link #join} got the chance to apply.
+     */
+    public static SectRank addRegard(ServerPlayer player, ResourceLocation id, int amount) {
+        int allowed = isMemberOf(player, id)
+                ? amount
+                : SectRank.regardGain(CultivationService.data(player).sectReputation(id), amount);
+        return addReputation(player, id, allowed);
+    }
+
+    /**
      * Grants standing with a sect, taking a share of it from any sect that opposes them.
      *
      * @return the rank the player now holds with that sect

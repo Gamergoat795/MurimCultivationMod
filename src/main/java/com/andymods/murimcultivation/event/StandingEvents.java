@@ -16,7 +16,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 
 /**
  * How conduct in a fight moves honour and infamy.
@@ -77,6 +76,14 @@ public final class StandingEvents {
                     SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.3F, 0.7F);
             // Deliberately no standing change. Losing a fight you asked for honestly is not
             // misconduct, and an honour system that punished it would only be measuring strength.
+            return;
+        }
+
+        // Anyone else striking a wanderer that was not already fighting is an ambush.
+        if (event.getEntity() instanceof WanderingWarriorEntity warrior
+                && event.getSource().getEntity() instanceof ServerPlayer player
+                && warrior.getTarget() == null) {
+            ambush(warrior, player);
         }
     }
 
@@ -91,8 +98,10 @@ public final class StandingEvents {
         // If they served a sect, beating one of their people is noticed — by them, and by whoever
         // opposes them. This is the first thing in the game to feed SectService.addReputation from
         // play, so the opposed-alignment penalty written in M5a finally has occasion to fire.
+        // Regard rather than membership, so beating four of a sect's people never makes you one of
+        // them without passing the gates join() enforces.
         warrior.sectId().ifPresent(sect ->
-                SectService.addReputation(player, sect, MurimConfig.duelSectReputation()));
+                SectService.addRegard(player, sect, MurimConfig.duelSectReputation()));
 
         player.sendSystemMessage(Component.translatable("murimcultivation.duel.yielded",
                 standing.honour()));
@@ -104,28 +113,28 @@ public final class StandingEvents {
     /**
      * Striking a wanderer that was not fighting you is an ambush.
      *
-     * <p>Only the first blow counts. Retaliation gives the warrior a target, so by the second swing
-     * this no longer fires — which is the intended reading: the ambush is the decision to start,
-     * not every hit in the fight that follows.
+     * <p>Detected on incoming damage rather than on {@code AttackEntityEvent}, which only fires for
+     * a melee swing. Arrows, thrown tridents and every martial art reach a warrior without one, so
+     * an ambush from range used to cost nothing at all. The source's owning entity is the shooter
+     * whatever the projectile, so one check covers all of them.
+     *
+     * <p>Only the first blow counts. {@link WanderingWarriorEntity#provoke} gives the warrior a target
+     * at once — not on its next AI tick, which a multishot crossbow would beat three times over —
+     * so later blows land on someone already fighting back.
      */
-    @SubscribeEvent
-    public static void onAttackEntity(AttackEntityEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)
-                || !(event.getTarget() instanceof WanderingWarriorEntity warrior)) {
-            return;
-        }
-        if (warrior.isDuellingWith(player) || warrior.getTarget() != null) {
+    private static void ambush(WanderingWarriorEntity warrior, ServerPlayer player) {
+        boolean wasYielded = warrior.hasYielded();
+        if (!warrior.provoke(player)) {
             return;
         }
 
         MurimStanding standing = CultivationService.data(player).standing();
-        if (warrior.hasYielded()) {
-            // Striking someone who has already laid down their guard. Handled as an ambush here and
-            // again, far more harshly, if it kills them.
-            StandingService.ambushed(standing, StandingService.Tuning.fromConfig());
+        StandingService.ambushed(standing, StandingService.Tuning.fromConfig());
+        if (wasYielded) {
+            // Striking someone who has already laid down their guard. Counted here once, and again,
+            // far more harshly, if it kills them.
             player.sendSystemMessage(Component.translatable("murimcultivation.duel.struck_yielded"));
         } else {
-            StandingService.ambushed(standing, StandingService.Tuning.fromConfig());
             player.sendSystemMessage(Component.translatable("murimcultivation.duel.ambushed",
                     standing.infamy()));
         }

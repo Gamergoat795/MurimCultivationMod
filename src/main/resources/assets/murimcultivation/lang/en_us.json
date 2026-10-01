@@ -226,6 +226,8 @@
   "murimcultivation.system.status.qi": "Qi",
   "murimcultivation.system.status.stats": "Stats — %s unspent",
   "murimcultivation.system.status.titles": "Titles",
+  "murimcultivation.system.status.honour": "Honour",
+  "murimcultivation.system.status.infamy": "Infamy",
   "murimcultivation.system.status.no_titles": "None earned.",
   "murimcultivation.system.meridians.header": "Qi network — %s of %s open",
   "murimcultivation.system.meridians.primary": "Primary meridians",
