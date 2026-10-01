@@ -2,7 +2,7 @@
 
 Everything that is waiting on **you** — either something to do, or a decision only you can make.
 
-Last updated against commit `9f2cbbd`. This file goes stale; the two things that never lie are
+Last updated against commit `36a0ec8`. This file goes stale; the two things that never lie are
 `python3 tools/verify_sources.py` and the GitHub Actions run on your latest push.
 
 ## Where it stands
@@ -10,30 +10,44 @@ Last updated against commit `9f2cbbd`. This file goes stale; the two things that
 | | |
 |---|---|
 | Built and CI-green | Core data layer, cultivation loop, 8 martial arts, System window + quests, sects, alchemy, teaching NPC, attention minigames, honour/infamy, wandering warriors, duels |
-| Tests | 245 across 24 files |
-| Source files | 110 |
+| Tests | 254 across 25 files |
+| Source files | 111 |
 | Art | **Complete** for items and blocks. Both new mobs render on vanilla player models |
-| Never run anywhere | `./gradlew runServer`, `./gradlew runClient` |
+| Proven on a dedicated server | Yes — CI boots one on every push and waits for `Done (` |
+| Never run anywhere | `./gradlew runClient` |
 | Never played | All of it |
 
 The gate reports nothing outstanding. That means every texture a model asks for exists and is
-correctly shaped, every translation key resolves, and the datapack is internally consistent — it
-does **not** mean the mod has been seen working, because nothing here has ever been launched.
+correctly shaped, every translation key resolves, and the datapack is internally consistent. Since the server smoke test landed it also means the mod
+loads on a dedicated server — but nobody has yet opened a client and played it.
 
 ## Since you last read this
 
-Your playtest notes are done, plus the first half of the content pass:
+The four server-readiness fixes are done, plus a pass over the warrior and duel code that turned up
+six real bugs.
 
-- **Both bugs fixed.** The breakthrough minigame had never worked for anyone — the prompt bar was
-  being wiped within a second of appearing, on every attempt, by a sync that fires once a second.
-  Techniques did nothing because three of the four slot keys shipped with no key bound and the
-  fourth held whatever art the registry yielded first. `C` now selects and `G` casts, so two keys
-  reach all four arts.
-- **Honour and infamy** are real values, 0–100 each, and they gate which sects will take you.
-- **Wandering warriors** spawn across the Overworld at a realm rolled from the local Qi-richness
-  and the distance from world spawn. They are neutral and never pick a fight.
-- **Duels.** Right-click to challenge. They accept, refuse, or attack if your name is bad enough.
-  A duel ends on a yield and cannot kill anyone, in either direction.
+- **The server actually starts.** CI now boots a headless dedicated server on every push and
+  fails if it does not reach `Done (`. The first run reached it in under seven seconds — the first
+  time anyone has seen this mod load on a server rather than inferred it.
+- **The spirit-vein cache bug is fixed.** Two players at the same coordinates in different
+  dimensions no longer share a vein count, singleplayer's two sides no longer share one, and loading
+  an older world no longer serves stale counts forever.
+- **`verify_sources` guards the dist boundary.** It fails on a client import in common code, and on
+  the one-line "simplification" in `ModPayloads` that would kill every server.
+- **Ordinary players can now use** `/murim info`, `realm get`, `chance`, `standing`, `quest list`,
+  `technique list`, `sect list`, and **`sect join` / `sect leave`** — joining was operator-only, which
+  meant non-op players could not join a sect at all. Join still applies every realm, allegiance and
+  honour check.
+- **Honour and infamy appear in the System window** (Status tab, under the stats). Before this the
+  only way to read them was an operator command.
+- **Six warrior/duel fixes:** saved warriors reloaded at 20 health regardless of realm; a duel never
+  ended if your opponent left, died to something else or logged out, so the warrior refused everyone
+  afterwards; ambushing with a bow or a martial art cost nothing; every hit during a truce counted as
+  a separate ambush; warriors could fill the whole monster cap on a sunny day; and beating four
+  members of a sect made you a member without ever joining.
+
+New config value: `[warriors] maxNearby` (default 2) — a natural spawn is refused when that many
+warriors are already within 48 blocks.
 
 **One thing to know before you load an existing dev world:** the save format changed. Sect standing
 moved inside a new `murim_standing` block, so an existing world loses its sect reputation and keeps
@@ -44,22 +58,9 @@ is optional, and it is cheap now and expensive later.
 
 # Do — needs your hands
 
-## 1. Start a server. Fifteen seconds, and it is the one gate CI cannot provide.
+## 1. Play it. This is now the biggest gap by far.
 
-```
-./gradlew runServer
-```
-
-It either reaches `Done (n.nns)! For help, type help` or it throws
-`NoClassDefFoundError: net/minecraft/client/...`. That single line is the whole test.
-
-Why it matters more than it looks: a Minecraft mod can compile perfectly and still be unable to
-start a dedicated server, because a client-only class reached from common code only fails at
-*class-load* time. CI runs `build`, which compiles and tests — it never starts a server. Every
-claim that this mod is "dist-clean" is an inference from reading the code. This makes it an
-observation.
-
-## 2. Play it. This is now the biggest gap by far.
+(The server half is covered: CI starts a dedicated server on every push.)
 
 ```
 ./gradlew runClient
@@ -78,8 +79,9 @@ and nothing more:
   realm. Right-click to challenge it; fight it down and watch it yield rather than die.
 - Challenge one far above you and confirm you are **spared** rather than killed. This is the single
   most important thing to check, because the whole fixed-difficulty design rests on it.
-- Then ambush one without challenging, and confirm `/murim standing` shows infamy rising and an
-  orthodox sect subsequently refusing you.
+- Then ambush one without challenging — try it with a bow too, which used to cost nothing — and
+  confirm the Status tab shows infamy rising and an orthodox sect subsequently refusing you.
+- Save and quit next to a high-realm warrior, reload, and check it still has its full health bar.
 - Kill one that has already yielded. It should be the worst outcome available to you.
 
 **Then meditation**, as before. Read a Qi gathering manual to awaken, then press `B` to meditate. A
@@ -122,18 +124,20 @@ honest" and "rejected", and I had no real players to calibrate it against.
 | `warriors.maxRealmGap` | 2 | How far apart two cultivators may be and still duel. Lower it and challenges get refused more |
 | `warriors.yieldHealthFraction` | 0.2 | When a duellist yields. This is what makes losing survivable, so do not set it near zero |
 | `warriors.sectChance` | 35 | Percentage of warriors carrying a sect allegiance |
+| `warriors.maxNearby` | 2 | Natural spawns refused once this many warriors are within 48 blocks |
 | `standing.honourPerHonourableWin` | 4 | Five clean wins reaches the orthodox threshold |
 | `standing.orthodoxHonourRequired` | 20 | Honour an orthodox sect wants |
 | `standing.demonicInfamyRequired` | 20 | Infamy a demonic sect wants. Four ambushes reaches it |
 
 **How often** warriors spawn is a datapack weight rather than a config value, in
 `data/murimcultivation/neoforge/biome_modifier/wandering_warriors.json` — a biome modifier cannot
-read config. It ships at weight 6, which is low; raise it if the roads feel empty.
+read config. It ships at weight 6; raise it if the roads feel empty, and raise `maxNearby` too or the
+local cap will absorb the change.
 
 Every amount in `[standing]` can be set to 0 to disable honour and infamy entirely, which leaves
 sect joining behaving exactly as it did before this pass. A test asserts that.
 
-## 3. Two clients, once.
+## 2. Two clients, once.
 
 Two things can only be checked with two players connected at once, and both are the kind of bug
 that is invisible in single-player:
@@ -144,7 +148,7 @@ that is invisible in single-player:
 The code is built so this cannot go wrong — every network payload in the mod is point-to-point,
 there is no broadcast anywhere. But that is an argument, not a test.
 
-## 4. Optional: replace the block textures.
+## 3. Optional: replace the block textures.
 
 The five block textures are **generated, not drawn** — `tools/generate_block_textures.py` makes
 them from a flat palette. They are correct and they work; they are not art. Overwrite the PNGs
@@ -168,26 +172,7 @@ Wandering warriors, duels and honour are built. The two mob types that hang off 
 Deliberately held back so the duel mechanic gets playtested before two more mob types are built on
 top of it. If duels feel wrong, I would rather change them now than in three places.
 
-## 2. The four server-readiness fixes
-
-Planned in full, not built. I have just re-verified all four are still outstanding. **One is a
-real bug**, not a cleanup:
-
-- **`QiSources` cache key omits the dimension.** Two players at the same coordinates in different
-  dimensions share a cached spirit-vein count, so one player's veins inflate the other's Qi
-  density — and with it their meditation gain, insight odds and breakthrough chance. There is a
-  second, nastier half: the freshness check compares against `level.getGameTime()`, which is
-  per-level, so a colliding entry from a level with a higher game time makes the subtraction
-  negative, reads as fresh, and serves a stale count indefinitely.
-- `invalidate()` has no callers despite a javadoc saying it runs on world unload.
-- `verify_sources` has no dist checks — the discipline keeping `runServer` alive is enforced by a
-  code comment.
-- The whole `/murim` tree sits behind one op-level gate, so read-only queries are admin-only. You
-  already chose to split read from write here.
-
-Say the word and I'll do all four.
-
-## 3. M7 — models and animations
+## 2. M7 — models and animations
 
 Planned in full. Needs your go-ahead, and it is the only thing in this list that **costs your
 players something**: two mods they must install (Player Animation Library, and Zigy's Player
@@ -206,13 +191,13 @@ nine animations authored in Blockbench**. I can build the loading, triggering an
 author animation, because hand-writing keyframes without a preview produces motion that is
 technically valid and looks wrong.
 
-## 4. M6 — polish
+## 3. M6 — polish
 
 Never started, and the only milestone with no plan written yet. Contents as sketched: advancements
 mirroring the realm ladder, datagen for models and tags, a balance pass, and documentation for
 datapack authors.
 
-## 5. The balance pass, specifically
+## 4. The balance pass, specifically
 
 Worth separating from the rest of M6 because it is the one that decides whether the mod is fun.
 The stated target — First-Rate in roughly two to three hours — has **never been measured**. Nobody
@@ -233,7 +218,9 @@ Not decisions, just things that do not exist yet:
 - No NPC entity texture. Both mobs render on vanilla player skins — the teacher as Steve, a
   wandering warrior as Alex — so they are told apart by their names rather than by looking
   different. Only fixed by M7a.
-- `isNearVein` in `QiSources` is dead public API with zero callers.
+- No "new quest available" toast. The notification and its text exist; nothing sends it.
+- Warrior spawn density is a guess. The weight (6) and the local cap (2) need someone to walk
+  around for ten minutes and say whether it feels like a road or a crowd.
 - Nothing distinguishes a Thug from a Master visually. The name states the tier and realm, which
   works, but you have to look at one to know whether to run.
 
@@ -244,8 +231,8 @@ Not decisions, just things that do not exist yet:
 ```
 python3 tools/verify_sources.py          # structure, unresolved type names, JSON, translation
                                          # keys, datapack consistency, texture dimensions, art
-./gradlew build                          # compile + 245 tests (this is what CI runs)
-./gradlew runServer                      # the gate CI cannot provide
+./gradlew build                          # compile + 254 tests (this is what CI runs)
+./gradlew runServer                      # CI does this too, on every push
 ./gradlew runClient                      # the only way to know how any of it feels
 ```
 
