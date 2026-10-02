@@ -2,16 +2,16 @@
 
 Everything that is waiting on **you** — either something to do, or a decision only you can make.
 
-Last updated against commit `36a0ec8`. This file goes stale; the two things that never lie are
+Last updated against commit `7d28790`. For the long view, phase by phase, see `docs/ROADMAP.md`. This file goes stale; the two things that never lie are
 `python3 tools/verify_sources.py` and the GitHub Actions run on your latest push.
 
 ## Where it stands
 
 | | |
 |---|---|
-| Built and CI-green | Core data layer, cultivation loop, 8 martial arts, System window + quests, sects, alchemy, teaching NPC, attention minigames, honour/infamy, wandering warriors, duels |
-| Tests | 254 across 25 files |
-| Source files | 111 |
+| Built and CI-green | Core data layer, cultivation loop, 8 martial arts, System window + quests, sects, alchemy, sect envoys, attention minigames, honour/infamy, wandering warriors, duels, sect conduct, duel spoils, bounty hunters, rankings |
+| Tests | 271 across 28 files |
+| Source files | 115 |
 | Art | **Complete** for items and blocks. Both new mobs render on vanilla player models |
 | Proven on a dedicated server | Yes — CI boots one on every push and waits for `Done (` |
 | Never run anywhere | `./gradlew runClient` |
@@ -22,6 +22,30 @@ correctly shaped, every translation key resolves, and the datapack is internally
 loads on a dedicated server — but nobody has yet opened a client and played it.
 
 ## Since you last read this
+
+Your sect-standing rules are in, plus the ideas from the last brainstorm:
+
+- **Sects judge what you do after you win**, exactly per your table (duel spared / duel killed /
+  ambush killed / ambush spared). It is decided when the outcome is known — when the truce ends or
+  the warrior dies — not at the moment it yields. To make "ambush, spared" possible, a warrior you
+  ambushed now yields when beaten too, instead of fighting to the death. The five sizes (minimal,
+  small, small-medium, medium, large) are under `[sectConduct]`.
+- **Warriors show their danger.** Names are coloured grey → white → gold → red by tier and carry
+  their sect's name in its colour.
+- **Duel spoils.** After a fair duel, right-click the warrior that yielded to accept its surrender
+  and it hands over herbs and pills — up to a foundation pill from a master. Killing it forfeits them.
+- **Sect envoys.** The old teacher NPC now recruits: talk twice to swear in, sneak-talk to see your
+  rank. They spawn rarely in the overworld and never despawn, so non-op players can finally join a
+  sect without a command.
+- **Bounty hunters.** At 40+ infamy, hunters matched to your realm come after you. They do not duel
+  or spare.
+- **`/murim rankings`**, open to everyone, and the **"new quest" toast** now fires.
+
+New config: `[sectConduct]` (five sizes), `[bounty]` (threshold, interval, chance), and
+`[warriors] envoyNaturalSpawns`. The `[warriors] sectReputation` key is gone — the conduct table
+replaces it.
+
+### Before that
 
 The four server-readiness fixes are done, plus a pass over the warrior and duel code that turned up
 six real bugs.
@@ -83,6 +107,9 @@ and nothing more:
   confirm the Status tab shows infamy rising and an orthodox sect subsequently refusing you.
 - Save and quit next to a high-realm warrior, reload, and check it still has its full health bar.
 - Kill one that has already yielded. It should be the worst outcome available to you.
+- Beat one fairly, then right-click it: you should get spoils and, if it has a sect, a standing message.
+- Find an envoy (or use its spawn egg), talk to it twice, and join a sect.
+- `/murim standing infamy 50` as an op, wait up to five minutes, and meet a bounty hunter.
 
 **Then meditation**, as before. Read a Qi gathering manual to awaken, then press `B` to meditate. A
 bar sweeps bottom-centre every 18–45 seconds; press `B` again inside the lit window.
@@ -218,7 +245,7 @@ Not decisions, just things that do not exist yet:
 - No NPC entity texture. Both mobs render on vanilla player skins — the teacher as Steve, a
   wandering warrior as Alex — so they are told apart by their names rather than by looking
   different. Only fixed by M7a.
-- No "new quest available" toast. The notification and its text exist; nothing sends it.
+- Envoy and hunter frequency are guesses, like warrior density.
 - Warrior spawn density is a guess. The weight (6) and the local cap (2) need someone to walk
   around for ten minutes and say whether it feels like a road or a crowd.
 - Nothing distinguishes a Thug from a Master visually. The name states the tier and realm, which
