@@ -188,6 +188,19 @@ def check_unresolved_names() -> None:
     """
     files = java_files()
 
+    # Nested types a class may name unqualified because it inherits them: Item.Properties inside an
+    # Item subclass, SystemTab.Area inside a tab. Minecraft's are listed; the project's own are
+    # discovered below from each file's nested declarations.
+    inherited: dict[str, set[str]] = {"Item": {"Properties"}, "Block": {"Properties"},
+                                      "BaseEntityBlock": {"Properties"},
+                                      "BlockBehaviour": {"Properties"}}
+    nested_decl = re.compile(r"^\s+(?:public\s+|protected\s+|private\s+)?(?:static\s+)?"
+                             r"(?:final\s+)?(?:class|interface|enum|record)\s+([A-Z]\w*)", re.M)
+    for path in files:
+        owner = os.path.basename(path)[:-len(".java")]
+        inherited.setdefault(owner, set()).update(nested_decl.findall(open(path, encoding="utf-8").read()))
+    supertypes = re.compile(r"\b(?:extends|implements)\s+([A-Z][\w<>,\s.]*?)\s*\{")
+
     # Every type this project declares, by package across both source roots — a test and the
     # class it tests share a package but never a directory.
     declared: dict[str, set[str]] = {}
@@ -199,6 +212,14 @@ def check_unresolved_names() -> None:
     declares = re.compile(r"\b(?:class|interface|enum|record|@interface)\s+([A-Z][A-Za-z0-9_]*)")
     imports = re.compile(r"^\s*import\s+(?:static\s+)?([\w.]+)\s*;", re.M)
     constant = re.compile(r"^[A-Z][A-Z0-9_]*$")
+    # Types named in declarations rather than calls: List<String> x, Foo bar = ..., (Foo foo).
+    generic = re.compile(r"(?<![\w.$])([A-Z][A-Za-z0-9_]*)\s*<")
+    typed = re.compile(r"(?<![\w.$@])([A-Z][A-Za-z0-9_]*)(?:\[\])?\s+[a-z_][A-Za-z0-9_]*\s*[=;,):]")
+    # Generic type parameters are in scope where declared: class Foo<T>, static <T> T bar().
+    type_param_lists = re.compile(r"(?:(?:class|interface|record)\s+\w+\s*|"
+                                  r"(?:public|private|protected|static|final)\s+)<([^<>()]*)>")
+    # Type arguments: the ResourceLocation in List<ResourceLocation>.
+    type_args = re.compile(r"[<,]\s*([A-Z][A-Za-z0-9_]*)\s*(?=[,<>\[])")
 
     for path in files:
         source = open(path, encoding="utf-8").read()
@@ -220,7 +241,13 @@ def check_unresolved_names() -> None:
             continue
 
         body = strip_code(source)
+        for params in type_param_lists.findall(body):
+            available |= set(re.findall(r"(?:^|,)\s*([A-Z]\w*)", params))
+        for clause in supertypes.findall(body):
+            for parent in re.findall(r"[A-Z]\w*", clause):
+                available |= inherited.get(parent, set())
         used = set(use.findall(body)) | set(construct.findall(body))
+        used |= set(generic.findall(body)) | set(typed.findall(body)) | set(type_args.findall(body))
         for name in sorted(used - available):
             if constant.match(name):
                 continue

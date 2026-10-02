@@ -91,6 +91,11 @@ public final class MurimConfig {
         private final ModConfigSpec.BooleanValue warriorNaturalSpawns;
         private final ModConfigSpec.IntValue warriorMaxNearby;
         private final ModConfigSpec.BooleanValue envoyNaturalSpawns;
+        private final ModConfigSpec.BooleanValue bountyEnabled;
+        private final ModConfigSpec.IntValue bountyInfamyThreshold;
+        private final ModConfigSpec.IntValue bountyCheckIntervalSeconds;
+        private final ModConfigSpec.DoubleValue bountyChancePerCheck;
+        private final ModConfigSpec.IntValue bountyInfamyForStrongerHunter;
         private final ModConfigSpec.IntValue warriorQiRichPressure;
         private final ModConfigSpec.IntValue warriorNeutralPressure;
         private final ModConfigSpec.IntValue warriorQiBarrenPressure;
@@ -605,6 +610,32 @@ public final class MurimConfig {
                     .defineInRange("sectChance", 35, 0, 100);
 
             builder.pop();
+            builder.comment("Bounty hunters: what infamy sends after you.",
+                            "Matched to your realm rather than the place, because the point is",
+                            "pursuit. A hunter does not duel, yield or spare.")
+                    .push("bounty");
+
+            bountyEnabled = builder.define("enabled", true);
+
+            bountyInfamyThreshold = builder
+                    .comment("Infamy at or above which a price goes on your head. At the defaults",
+                            "that is about seven unprovoked ambushes, or three killings of the yielded.")
+                    .defineInRange("infamyThreshold", 40, 0, 100);
+
+            bountyCheckIntervalSeconds = builder
+                    .comment("How often each wanted player's luck is tested, in seconds.")
+                    .defineInRange("checkIntervalSeconds", 300, 30, 86400);
+
+            bountyChancePerCheck = builder
+                    .comment("The chance a hunter is actually sent at each check. At the defaults a",
+                            "wanted player meets one roughly every fifteen minutes.")
+                    .defineInRange("chancePerCheck", 0.35D, 0.0D, 1.0D);
+
+            bountyInfamyForStrongerHunter = builder
+                    .comment("Infamy at or above which the hunter is a realm above you.")
+                    .defineInRange("infamyForStrongerHunter", 80, 0, 100);
+
+            builder.pop();
             builder.comment("Performance and presentation").push("general");
 
             cultivationTickInterval = builder
@@ -891,6 +922,26 @@ public final class MurimConfig {
 
     public static boolean warriorNaturalSpawns() {
         return VALUES.warriorNaturalSpawns.get();
+    }
+
+    public static boolean bountyEnabled() {
+        return VALUES.bountyEnabled.get();
+    }
+
+    public static int bountyInfamyThreshold() {
+        return VALUES.bountyInfamyThreshold.get();
+    }
+
+    public static int bountyCheckIntervalSeconds() {
+        return VALUES.bountyCheckIntervalSeconds.get();
+    }
+
+    public static double bountyChancePerCheck() {
+        return VALUES.bountyChancePerCheck.get();
+    }
+
+    public static int bountyInfamyForStrongerHunter() {
+        return VALUES.bountyInfamyForStrongerHunter.get();
     }
 
     public static boolean envoyNaturalSpawns() {

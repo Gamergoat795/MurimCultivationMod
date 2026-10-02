@@ -19,6 +19,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -196,6 +197,7 @@ public final class QuestTracker {
 
     private static void complete(ServerPlayer player, ResourceLocation id, SystemQuest quest) {
         CultivationData data = CultivationService.data(player);
+        List<ResourceLocation> before = available(player);
         data.questLog().complete(id, quest.category());
 
         for (QuestReward reward : quest.rewards()) {
@@ -203,8 +205,28 @@ public final class QuestTracker {
         }
 
         SystemNotifications.send(player, SystemNotification.questComplete(quest.displayName()));
+        announceNewlyAvailable(player, before);
         CultivationService.applyAttributes(player);
         CultivationService.syncToClient(player);
+    }
+
+    /**
+     * Toasts every story quest on offer now that was not in {@code before}.
+     *
+     * <p>Callers snapshot {@link #available} just before the change that might unlock something —
+     * completing a quest, breaking through, awakening — and hand it here afterwards. Dailies are
+     * left out: their reset already has its own toast, and announcing each one would bury it.
+     */
+    public static void announceNewlyAvailable(ServerPlayer player, Collection<ResourceLocation> before) {
+        for (ResourceLocation id : available(player)) {
+            if (before.contains(id)) {
+                continue;
+            }
+            SystemQuest quest = registry(player).get(ResourceKey.create(MurimRegistries.QUEST, id));
+            if (quest != null && !quest.category().repeatable()) {
+                SystemNotifications.send(player, SystemNotification.questAvailable(quest.displayName()));
+            }
+        }
     }
 
     private static void grant(ServerPlayer player, CultivationData data, QuestReward reward) {

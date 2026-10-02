@@ -5,6 +5,7 @@ import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.Realm;
 import com.andymods.murimcultivation.cultivation.RealmProgression;
 import com.andymods.murimcultivation.cultivation.Substage;
+import com.andymods.murimcultivation.system.QuestTracker;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -64,6 +65,8 @@ public class QiGatheringManualItem extends Item {
         data.setAwakened(true);
         data.setSubstage(Substage.EARLY);
         CultivationService.setRealm(serverPlayer, lowest.get().key(), Substage.EARLY);
+        // Nothing was on offer before awakening, so everything on offer now is new.
+        QuestTracker.announceNewlyAvailable(serverPlayer, List.of());
 
         serverPlayer.sendSystemMessage(Component.translatable("murimcultivation.message.awakened",
                 lowest.get().value().fullDisplayName()));

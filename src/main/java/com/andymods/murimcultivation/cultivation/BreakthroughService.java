@@ -8,6 +8,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -16,6 +17,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -242,11 +244,14 @@ public final class BreakthroughService {
         data.setProgress(data.progress() - current.progressToLeave(data.substage()));
 
         if (player.getRandom().nextDouble() < chance) {
+            List<ResourceLocation> questsBefore = QuestTracker.available(player);
             CultivationService.setRealm(player, nextHolder.key(), Substage.EARLY);
             data.systemProgress().grantPoints(MurimConfig.statPointsPerRealm());
             celebrate(player, target, chance);
             SystemNotifications.send(player, SystemNotification.realmAttained(target.fullDisplayName()));
-            // A new realm can satisfy a realm-gated objective and unlock further quests.
+            // A new realm opens realm-gated quests, and can satisfy realm objectives. Announce first:
+            // evaluate may complete quests, and those completions announce their own unlocks.
+            QuestTracker.announceNewlyAvailable(player, questsBefore);
             QuestTracker.evaluate(player);
             return Optional.of(Result.success(chance, target));
         }

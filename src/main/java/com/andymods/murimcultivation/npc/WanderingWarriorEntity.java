@@ -7,6 +7,8 @@ import com.andymods.murimcultivation.cultivation.AttributeGrant;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.QiDensity;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.registry.ModEntities;
+import net.minecraft.ChatFormatting;
 import com.andymods.murimcultivation.sect.SectConduct;
 import com.andymods.murimcultivation.sect.SectService;
 import net.minecraft.core.BlockPos;
@@ -24,6 +26,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
@@ -35,6 +38,7 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -49,6 +53,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
@@ -84,6 +89,15 @@ public class WanderingWarriorEntity extends PathfinderMob {
     private static final String REALM_TIER_TAG = "RealmTier";
     private static final String TIER_TAG = "Tier";
     private static final String SECT_TAG = "Sect";
+
+    private static final String QUARRY_TAG = "Quarry";
+    private static final String HUNT_EXPIRES_TAG = "HuntExpires";
+
+    /** How far a hunter will follow before giving up the contract, in blocks squared. */
+    private static final double HUNT_LEASH_SQR = 96.0D * 96.0D;
+
+    /** Extra follow range for a hunter, so it can actually track someone rather than lose them at 24 blocks. */
+    private static final double HUNTER_FOLLOW_BONUS = 40.0D;
 
     /** Vanilla's own key for saved health, read back after the realm's grants are reapplied. */
     private static final String HEALTH_TAG = "Health";
@@ -122,6 +136,10 @@ public class WanderingWarriorEntity extends PathfinderMob {
 
     /** Whoever struck it first without asking, while that fight lasts. They can beat it to a yield too. */
     private UUID ambushedBy;
+
+    /** If this is a bounty hunter: whom it was sent after, and when the contract lapses (game time). */
+    private UUID quarry;
+    private long huntExpires;
 
     /** Who it yielded to, and whether that was a fair fight — what the sects judge when it ends. */
     private UUID victor;
@@ -308,6 +326,10 @@ public class WanderingWarriorEntity extends PathfinderMob {
         Component realmName = realmAt(realmTier)
                 .map(Realm::displayName)
                 .orElseGet(() -> Component.literal("tier " + realmTier));
+        if (quarry != null) {
+            return Component.translatable("murimcultivation.warrior.hunter_name", realmName)
+                    .withStyle(ChatFormatting.DARK_RED);
+        }
         MutableComponent name = Component.translatable("murimcultivation.warrior.name",
                 Component.translatable(tier.translationKey()), realmName).withStyle(tier.color());
         sect.flatMap(id -> level().registryAccess().registryOrThrow(MurimRegistries.SECT)
@@ -362,9 +384,90 @@ public class WanderingWarriorEntity extends PathfinderMob {
      * happily re-acquire from {@code getLastHurtByMob} the moment anything touches it — so a single
      * clear would last until the next hit and no longer.
      */
+    // --- Bounty hunting ---------------------------------------------------------------
+
+    /**
+     * Sends a hunter after someone notorious: spawned out of sight, matched to them, and gone again
+     * once the contract is over.
+     *
+     * @return whether a spot was found and the hunter placed
+     */
+    public static boolean sendHunter(ServerPlayer target, int realmTier, int contractTicks) {
+        ServerLevel level = target.serverLevel();
+        RandomSource random = target.getRandom();
+        for (int attempt = 0; attempt < 10; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            double distance = 24.0D + random.nextDouble() * 16.0D;
+            int x = Mth.floor(target.getX() + Math.cos(angle) * distance);
+            int z = Mth.floor(target.getZ() + Math.sin(angle) * distance);
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            BlockPos pos = new BlockPos(x, y, z);
+            // Solid footing, dry, and loaded — never force a chunk for a hunter.
+            if (!level.hasChunkAt(pos) || !level.getBlockState(pos.below()).isSolid()
+                    || !level.getFluidState(pos).isEmpty()) {
+                continue;
+            }
+
+            WanderingWarriorEntity hunter = ModEntities.WANDERING_WARRIOR.get().create(level);
+            if (hunter == null) {
+                return false;
+            }
+            hunter.moveTo(x + 0.5D, y, z + 0.5D, random.nextFloat() * 360.0F, 0.0F);
+            hunter.quarry = target.getUUID();
+            hunter.huntExpires = level.getGameTime() + contractTicks;
+            hunter.setRealmTier(realmTier);
+            hunter.applyHunterAttributes();
+            hunter.setHealth(hunter.getMaxHealth());
+            hunter.setTarget(target);
+            level.addFreshEntity(hunter);
+            return true;
+        }
+        return false;
+    }
+
+    /** Whether this is a hunter sent after that player. */
+    public boolean isHunting(Player player) {
+        return quarry != null && quarry.equals(player.getUUID());
+    }
+
+    public boolean isHunter() {
+        return quarry != null;
+    }
+
+    private void applyHunterAttributes() {
+        AttributeInstance follow = getAttribute(Attributes.FOLLOW_RANGE);
+        if (follow != null) {
+            follow.addOrUpdateTransientModifier(new AttributeModifier(
+                    MurimCultivationMod.id("hunter_follow"), HUNTER_FOLLOW_BONUS,
+                    AttributeModifier.Operation.ADD_VALUE));
+        }
+    }
+
+    /**
+     * Keeps a hunter on its quarry, and ends the contract when there is nothing left to pursue:
+     * they died, left the dimension, got far enough away, or the time ran out. It simply leaves —
+     * a hunter that stood around afterwards would be a wanderer with the wrong name.
+     */
+    private void tickHunt() {
+        Player target = level().getPlayerByUUID(quarry);
+        boolean over = target == null || !target.isAlive() || target.isSpectator()
+                || distanceToSqr(target) > HUNT_LEASH_SQR || level().getGameTime() > huntExpires;
+        if (over) {
+            discard();
+            return;
+        }
+        if (getTarget() != target) {
+            setTarget(target);
+        }
+    }
+
     @Override
     protected void customServerAiStep() {
         super.customServerAiStep();
+        if (quarry != null) {
+            tickHunt();
+            return;
+        }
         if (duelOpponent != null && !opponentStillPresent()) {
             // They died to something else, changed dimension, logged out or walked away. No
             // standing moves: nobody yielded, and leaving is not misconduct.
@@ -553,6 +656,12 @@ public class WanderingWarriorEntity extends PathfinderMob {
             return InteractionResult.sidedSuccess(level().isClientSide());
         }
 
+        if (quarry != null) {
+            say(serverPlayer, isHunting(player)
+                    ? "murimcultivation.warrior.hunter_no_parley"
+                    : "murimcultivation.warrior.hunter_busy");
+            return InteractionResult.CONSUME;
+        }
         if (hasYielded() && yieldedTo(player)) {
             acceptSurrender(serverPlayer);
             return InteractionResult.CONSUME;
@@ -609,11 +718,21 @@ public class WanderingWarriorEntity extends PathfinderMob {
         tag.putInt(REALM_TIER_TAG, realmTier);
         tag.putString(TIER_TAG, tier.getSerializedName());
         sect.ifPresent(id -> tag.putString(SECT_TAG, id.toString()));
+        if (quarry != null) {
+            tag.putUUID(QUARRY_TAG, quarry);
+            tag.putLong(HUNT_EXPIRES_TAG, huntExpires);
+        }
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        // Before the realm, so the name it rebuilds is a hunter's.
+        if (tag.hasUUID(QUARRY_TAG)) {
+            quarry = tag.getUUID(QUARRY_TAG);
+            huntExpires = tag.getLong(HUNT_EXPIRES_TAG);
+            applyHunterAttributes();
+        }
         if (tag.contains(SECT_TAG)) {
             sect = Optional.ofNullable(ResourceLocation.tryParse(tag.getString(SECT_TAG)));
         }

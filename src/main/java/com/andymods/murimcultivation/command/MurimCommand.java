@@ -5,6 +5,7 @@ import com.andymods.murimcultivation.MurimRegistries;
 import com.andymods.murimcultivation.item.MartialManualItem;
 import com.andymods.murimcultivation.registry.ModItems;
 import com.andymods.murimcultivation.sect.Sect;
+import com.andymods.murimcultivation.standing.MurimRankings;
 import com.andymods.murimcultivation.standing.MurimStanding;
 import com.andymods.murimcultivation.standing.StandingService;
 import com.andymods.murimcultivation.sect.SectRank;
@@ -52,6 +53,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -148,6 +150,8 @@ public final class MurimCommand {
         root.then(sub("breakthrough", Access.GAMEMASTER).executes(MurimCommand::forceBreakthroughCheck));
 
         root.then(sub("chance", Access.ANYONE).executes(MurimCommand::showBreakthroughChance));
+
+        root.then(sub("rankings", Access.ANYONE).executes(MurimCommand::showRankings));
 
         root.then(Commands.literal("quest")
                 .then(sub("list", Access.ANYONE).executes(MurimCommand::listQuests))
@@ -432,6 +436,37 @@ public final class MurimCommand {
                 QiDensity.multiplierFor(player),
                 BreakthroughService.severityForFailedAttempt(chance.get()).getSerializedName())));
         return 1;
+    }
+
+    /** The ten highest cultivators online, best first. See {@link MurimRankings}. */
+    private static int showRankings(CommandContext<CommandSourceStack> context) {
+        List<MurimRankings.Entry> entries = new ArrayList<>();
+        Map<String, Component> realmNames = new HashMap<>();
+        for (ServerPlayer player : context.getSource().getServer().getPlayerList().getPlayers()) {
+            CultivationData data = CultivationService.data(player);
+            Optional<Realm> realm = CultivationService.realmOf(player);
+            if (!data.isAwakened() || realm.isEmpty()) {
+                continue;
+            }
+            String name = player.getGameProfile().getName();
+            entries.add(new MurimRankings.Entry(name, realm.get().tier(), data.substage().ordinal(),
+                    data.progress(), data.standing().honour()));
+            realmNames.put(name, Component.empty().append(realm.get().fullDisplayName())
+                    .append(" (").append(Component.translatable(data.substage().translationKey())).append(")"));
+        }
+
+        send(context, Component.translatable("murimcultivation.rankings.header"));
+        List<MurimRankings.Entry> top = MurimRankings.top(entries, 10);
+        if (top.isEmpty()) {
+            send(context, Component.translatable("murimcultivation.rankings.empty"));
+            return 0;
+        }
+        for (int i = 0; i < top.size(); i++) {
+            MurimRankings.Entry entry = top.get(i);
+            send(context, Component.translatable("murimcultivation.rankings.line",
+                    i + 1, entry.name(), realmNames.get(entry.name()), entry.honour()));
+        }
+        return top.size();
     }
 
     private static int inflictDeviation(CommandContext<CommandSourceStack> context)
