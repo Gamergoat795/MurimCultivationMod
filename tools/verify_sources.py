@@ -325,6 +325,41 @@ def check_json_parses() -> None:
             fail(f"{path}: invalid JSON: {error}")
 
 
+def registered_items() -> set[str]:
+    source = open("src/main/java/com/andymods/murimcultivation/registry/ModItems.java",
+                  encoding="utf-8").read()
+    return {f"{MODID}:{name}" for name in re.findall(r'ITEMS\.register\("(\w+)"', source)}
+
+
+def check_loot_tables() -> None:
+    """Item names in loot tables resolve, and every warrior tier has a spoils table.
+
+    A loot table naming an item that does not exist loads without complaint and simply never drops
+    it, and the spoils path is built at runtime from the tier's id — both silent at runtime.
+    """
+    items = registered_items()
+
+    def walk(node, path):
+        if isinstance(node, dict):
+            name = node.get("name")
+            if node.get("type") == "minecraft:item" and isinstance(name, str) \
+                    and name.startswith(f"{MODID}:") and name not in items:
+                fail(f"{path}: loot entry names unregistered item {name}")
+            for value in node.values():
+                walk(value, path)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value, path)
+
+    for path in sorted(glob.glob(f"src/main/resources/data/{MODID}/loot_table/**/*.json", recursive=True)):
+        walk(json.load(open(path, encoding="utf-8")), path)
+
+    spoils = f"src/main/resources/data/{MODID}/loot_table/gameplay/duel_spoils"
+    for tier in enum_ids("src/main/java/com/andymods/murimcultivation/npc/WarriorTier.java"):
+        if not os.path.exists(f"{spoils}/{tier}.json"):
+            fail(f"{spoils}/{tier}.json: missing; a {tier} spared after a duel would hand over nothing")
+
+
 def check_datapack_consistency() -> None:
     """Cross-file invariants that no single file's schema can express.
 
@@ -548,6 +583,7 @@ def main() -> int:
     check_json_parses()
     check_translation_keys()
     check_datapack_consistency()
+    check_loot_tables()
     missing_art = check_textures()
     misshapen_art = check_texture_shapes()
 

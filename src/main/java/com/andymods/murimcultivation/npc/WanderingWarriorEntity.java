@@ -12,9 +12,11 @@ import com.andymods.murimcultivation.sect.SectService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -42,10 +44,15 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 
 import java.util.Comparator;
@@ -293,13 +300,21 @@ public class WanderingWarriorEntity extends PathfinderMob {
         setCustomName(describe());
     }
 
-    /** The name a player reads when they look at one: what it is, and how far along it is. */
+    /**
+     * The name a player reads when they look at one: what it is, how far along it is, and who it
+     * answers to. Coloured by tier so danger reads at a glance, before the words do.
+     */
     private Component describe() {
         Component realmName = realmAt(realmTier)
                 .map(Realm::displayName)
                 .orElseGet(() -> Component.literal("tier " + realmTier));
-        return Component.translatable("murimcultivation.warrior.name",
-                Component.translatable(tier.translationKey()), realmName);
+        MutableComponent name = Component.translatable("murimcultivation.warrior.name",
+                Component.translatable(tier.translationKey()), realmName).withStyle(tier.color());
+        sect.flatMap(id -> level().registryAccess().registryOrThrow(MurimRegistries.SECT)
+                        .getOptional(ResourceKey.create(MurimRegistries.SECT, id)))
+                .ifPresent(value -> name.append(Component.translatable("murimcultivation.warrior.sect_suffix",
+                        value.displayName()).withColor(value.color())));
+        return name;
     }
 
     private Optional<Realm> realmAt(int tier) {
@@ -373,13 +388,25 @@ public class WanderingWarriorEntity extends PathfinderMob {
     }
 
     /**
+     * The winner accepts the yield in person rather than waiting out the truce. The same outcome as
+     * the truce lapsing — spared — only sooner, and it is the natural way to collect what a fair
+     * duel earns. The warrior keeps recovering, so it will not turn and fight straight away.
+     */
+    private void acceptSurrender(ServerPlayer winner) {
+        resolveSpared();
+        yielded = false;
+        struckWhileYielded = false;
+        victor = null;
+    }
+
+    /**
      * The truce ran out and it is still alive: whoever beat it chose to spare it.
      *
      * <p>Judged at the end of the truce rather than at the yield, because until then the winner can
      * still change their mind — and the sects care about what they finally did.
      */
     private void resolveSpared() {
-        if (victor == null || sect.isEmpty() || getServer() == null) {
+        if (victor == null || getServer() == null) {
             return;
         }
         ServerPlayer winner = getServer().getPlayerList().getPlayer(victor);
@@ -388,8 +415,36 @@ public class WanderingWarriorEntity extends PathfinderMob {
         }
         if (victorFoughtFairly) {
             say(winner, "murimcultivation.warrior.spared_thanks");
+            giveSpoils(winner);
         }
-        SectService.applyConduct(winner, sect.get(), SectConduct.Outcome.of(victorFoughtFairly, false));
+        sect.ifPresent(id -> SectService.applyConduct(winner, id, SectConduct.Outcome.of(victorFoughtFairly, false)));
+    }
+
+    /**
+     * What a spared duellist hands over: herbs and pills, from a loot table per tier.
+     *
+     * <p>Only for a fair duel that ends in mercy. Killing them forfeits it, and so does having
+     * jumped them — the reward has to sit on the honourable path or the path means nothing. A loot
+     * table rather than code so a datapack can retune what each tier carries.
+     */
+    private void giveSpoils(ServerPlayer winner) {
+        if (!(level() instanceof ServerLevel server)) {
+            return;
+        }
+        ResourceKey<LootTable> key = ResourceKey.create(Registries.LOOT_TABLE,
+                MurimCultivationMod.id("gameplay/duel_spoils/" + tier.getSerializedName()));
+        LootTable table = server.getServer().reloadableRegistries().getLootTable(key);
+        LootParams params = new LootParams.Builder(server)
+                .withParameter(LootContextParams.ORIGIN, position())
+                .withParameter(LootContextParams.THIS_ENTITY, winner)
+                .create(LootContextParamSets.GIFT);
+        for (ItemStack stack : table.getRandomItems(params)) {
+            winner.sendSystemMessage(Component.translatable("murimcultivation.duel.spoils",
+                    stack.getHoverName(), stack.getCount()));
+            if (!winner.getInventory().add(stack)) {
+                winner.drop(stack, false);
+            }
+        }
     }
 
     private boolean opponentStillPresent() {
@@ -434,8 +489,9 @@ public class WanderingWarriorEntity extends PathfinderMob {
                                         MobSpawnType spawnType, SpawnGroupData groupData) {
         SpawnGroupData result = super.finalizeSpawn(level, difficulty, spawnType, groupData);
 
-        setRealmTier(rollRealmTier(level, blockPosition(), getRandom()));
         rollSect(getRandom());
+        // After the sect, so the name carries it.
+        setRealmTier(rollRealmTier(level, blockPosition(), getRandom()));
         // Only on a fresh spawn: the realm grants raise max health, and a warrior that arrives
         // already wounded reads as a bug. A loaded one keeps the health it was saved with.
         setHealth(getMaxHealth());
@@ -497,6 +553,10 @@ public class WanderingWarriorEntity extends PathfinderMob {
             return InteractionResult.sidedSuccess(level().isClientSide());
         }
 
+        if (hasYielded() && yieldedTo(player)) {
+            acceptSurrender(serverPlayer);
+            return InteractionResult.CONSUME;
+        }
         if (isInTruce()) {
             say(serverPlayer, "murimcultivation.warrior.recovering");
             return InteractionResult.CONSUME;

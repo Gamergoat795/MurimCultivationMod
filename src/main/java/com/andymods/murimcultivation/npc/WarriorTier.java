@@ -2,6 +2,7 @@ package com.andymods.murimcultivation.npc;
 
 import net.minecraft.util.StringRepresentable;
 import com.mojang.serialization.Codec;
+import net.minecraft.ChatFormatting;
 
 /**
  * What kind of fighter a wandering warrior is.
@@ -15,27 +16,37 @@ import com.mojang.serialization.Codec;
 public enum WarriorTier implements StringRepresentable {
 
     /** Third-Rate. Common, weak, and as likely as not dishonourable themselves. */
-    THUG("thug", 1, 1),
+    THUG("thug", 1, 1, ChatFormatting.GRAY),
 
     /** Second- to First-Rate. The standard duel partner, and the one you meet most. */
-    WANDERER("wanderer", 2, 3),
+    WANDERER("wanderer", 2, 3, ChatFormatting.WHITE),
 
     /** Peak. Uncommon and genuinely dangerous to anyone who has not prepared. */
-    EXPERT("expert", 4, 4),
+    EXPERT("expert", 4, 4, ChatFormatting.GOLD),
 
     /** Transcendent. Rare, and refuses challengers it considers beneath it. */
-    MASTER("master", 5, 5);
+    MASTER("master", 5, 5, ChatFormatting.RED);
 
     public static final Codec<WarriorTier> CODEC = StringRepresentable.fromEnum(WarriorTier::values);
 
     private final String id;
     private final int lowestRealmTier;
     private final int highestRealmTier;
+    private final ChatFormatting color;
 
-    WarriorTier(String id, int lowestRealmTier, int highestRealmTier) {
+    WarriorTier(String id, int lowestRealmTier, int highestRealmTier, ChatFormatting color) {
         this.id = id;
         this.lowestRealmTier = lowestRealmTier;
         this.highestRealmTier = highestRealmTier;
+        this.color = color;
+    }
+
+    /**
+     * The colour its name is drawn in, so you can tell whether to run before reading the words.
+     * Grey to red, the way danger reads everywhere else in the game.
+     */
+    public ChatFormatting color() {
+        return color;
     }
 
     public int lowestRealmTier() {
