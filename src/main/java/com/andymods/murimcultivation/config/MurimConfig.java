@@ -100,7 +100,11 @@ public final class MurimConfig {
         private final ModConfigSpec.IntValue duelInfamyThatProvokes;
         private final ModConfigSpec.DoubleValue duelYieldHealthFraction;
         private final ModConfigSpec.IntValue duelTruceTicks;
-        private final ModConfigSpec.IntValue duelSectReputation;
+        private final ModConfigSpec.IntValue conductMinimal;
+        private final ModConfigSpec.IntValue conductSmall;
+        private final ModConfigSpec.IntValue conductSmallMedium;
+        private final ModConfigSpec.IntValue conductMedium;
+        private final ModConfigSpec.IntValue conductLarge;
         private final ModConfigSpec.IntValue warriorSectChance;
         private final ModConfigSpec.IntValue cultivationTickInterval;
         private final ModConfigSpec.BooleanValue announceBreakthroughs;
@@ -479,6 +483,22 @@ public final class MurimConfig {
                     .defineInRange("demonicInfamyRequired", 20, 0, 100);
 
             builder.pop();
+            builder.comment("How sects react when you beat one of their members, by what you did after.",
+                            "  Duel, spared:        their sect +small",
+                            "  Duel, killed:        their sect -small, other sects +small, other demonic +smallMedium",
+                            "  Ambush, killed:      their sect -large, other sects -minimal, other demonic +medium",
+                            "  Ambush, spared:      nothing",
+                            "Outsiders' gains stop just short of membership (99): you still have to ask to join.",
+                            "For scale, joining a sect grants 100 and inner disciple is 400.")
+                    .push("sectConduct");
+
+            conductMinimal = builder.defineInRange("minimal", 2, 0, 10000);
+            conductSmall = builder.defineInRange("small", 10, 0, 10000);
+            conductSmallMedium = builder.defineInRange("smallMedium", 20, 0, 10000);
+            conductMedium = builder.defineInRange("medium", 35, 0, 10000);
+            conductLarge = builder.defineInRange("large", 60, 0, 10000);
+
+            builder.pop();
             builder.comment("Wandering warriors: who you meet on the road, and how hard they are.",
                             "A warrior's realm is rolled once when it spawns and never scales to",
                             "you, which is what gives the world geography — somewhere is safe and",
@@ -569,13 +589,6 @@ public final class MurimConfig {
                             "refusing to is available.")
                     .defineInRange("truceTicks", 400, 20, 24000);
 
-            duelSectReputation = builder
-                    .comment("Sect standing gained for beating one of their people honourably. Killing",
-                            "one that had yielded costs twice this with their sect instead. Beating a",
-                            "sect's member also costs standing with their enemies, at the opposed-sect",
-                            "penalty -- this is the first thing in the game that grants sect standing",
-                            "from play rather than from a command.")
-                    .defineInRange("sectReputation", 25, 0, 10000);
 
             warriorSectChance = builder
                     .comment("Percentage of wandering warriors who belong to a sect. Most do not, on",
@@ -916,8 +929,24 @@ public final class MurimConfig {
         return VALUES.duelTruceTicks.get();
     }
 
-    public static int duelSectReputation() {
-        return VALUES.duelSectReputation.get();
+    public static int conductMinimal() {
+        return VALUES.conductMinimal.get();
+    }
+
+    public static int conductSmall() {
+        return VALUES.conductSmall.get();
+    }
+
+    public static int conductSmallMedium() {
+        return VALUES.conductSmallMedium.get();
+    }
+
+    public static int conductMedium() {
+        return VALUES.conductMedium.get();
+    }
+
+    public static int conductLarge() {
+        return VALUES.conductLarge.get();
     }
 
     public static int warriorSectChance() {

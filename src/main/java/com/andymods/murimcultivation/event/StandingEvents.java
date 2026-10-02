@@ -5,6 +5,7 @@ import com.andymods.murimcultivation.config.MurimConfig;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.npc.DuelService;
 import com.andymods.murimcultivation.npc.WanderingWarriorEntity;
+import com.andymods.murimcultivation.sect.SectConduct;
 import com.andymods.murimcultivation.sect.SectService;
 import com.andymods.murimcultivation.standing.MurimStanding;
 import com.andymods.murimcultivation.standing.StandingService;
@@ -79,6 +80,22 @@ public final class StandingEvents {
             return;
         }
 
+        // A warrior beaten by the player who ambushed it yields too. It did not ask for this fight,
+        // but it would rather live — and what the ambusher does next is what the sects judge.
+        if (event.getEntity() instanceof WanderingWarriorEntity warrior
+                && event.getSource().getEntity() instanceof ServerPlayer player
+                && warrior.wasAmbushedBy(player)) {
+            if (!DuelService.wouldYield(warrior.getHealth(), warrior.getMaxHealth(),
+                    event.getAmount(), tuning)) {
+                return;
+            }
+            event.setAmount(DuelService.damageBeforeYielding(
+                    warrior.getHealth(), warrior.getMaxHealth(), event.getAmount(), tuning));
+            warrior.yieldTo(player, false, MurimConfig.duelTruceTicks());
+            player.sendSystemMessage(Component.translatable("murimcultivation.duel.yielded_ambush"));
+            return;
+        }
+
         // Anyone else striking a wanderer that was not already fighting is an ambush.
         if (event.getEntity() instanceof WanderingWarriorEntity warrior
                 && event.getSource().getEntity() instanceof ServerPlayer player
@@ -90,18 +107,13 @@ public final class StandingEvents {
     /** The warrior yields: the player has won honourably, and gains by it. */
     private static void warriorYields(WanderingWarriorEntity warrior, ServerPlayer player,
                                       DuelService.Tuning tuning) {
-        warrior.standDown(MurimConfig.duelTruceTicks(), true);
+        warrior.yieldTo(player, true, MurimConfig.duelTruceTicks());
 
         MurimStanding standing = CultivationService.data(player).standing();
         StandingService.wonHonourably(standing, StandingService.Tuning.fromConfig());
 
-        // If they served a sect, beating one of their people is noticed — by them, and by whoever
-        // opposes them. This is the first thing in the game to feed SectService.addReputation from
-        // play, so the opposed-alignment penalty written in M5a finally has occasion to fire.
-        // Regard rather than membership, so beating four of a sect's people never makes you one of
-        // them without passing the gates join() enforces.
-        warrior.sectId().ifPresent(sect ->
-                SectService.addRegard(player, sect, MurimConfig.duelSectReputation()));
+        // No sect standing yet. The sects judge what you do with the yield, not the win itself, so
+        // that waits until the truce ends (spared) or the warrior dies (not).
 
         player.sendSystemMessage(Component.translatable("murimcultivation.duel.yielded",
                 standing.honour()));
@@ -158,9 +170,11 @@ public final class StandingEvents {
         MurimStanding standing = CultivationService.data(player).standing();
         StandingService.killedTheYielded(standing, StandingService.Tuning.fromConfig());
 
-        // And their sect remembers it, which is the fastest route to being unwelcome everywhere.
+        // Whoever it yielded to is judged by how that fight began. Anyone else who kills it was never
+        // in a fight with it at all, which makes it murder from ambush.
+        boolean fairFight = warrior.yieldedTo(player) && warrior.yieldedInFairFight();
         warrior.sectId().ifPresent(sect ->
-                SectService.addReputation(player, sect, -MurimConfig.duelSectReputation() * 2));
+                SectService.applyConduct(player, sect, SectConduct.Outcome.of(fairFight, true)));
 
         player.sendSystemMessage(Component.translatable("murimcultivation.duel.killed_yielded",
                 standing.infamy()));

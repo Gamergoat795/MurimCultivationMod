@@ -13,6 +13,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -165,16 +168,49 @@ public final class SectService {
     }
 
     /**
-     * Standing earned from outside a sect: it raises regard, but never far enough to make you a
-     * member. Without this, beating four of a sect's people honourably made you an outer disciple
-     * of a sect you never asked to join — past its realm floor, its allegiance check and its
-     * standing gate, none of which {@link #join} got the chance to apply.
+     * Applies {@link SectConduct}'s table for one finished fight with a member of {@code victimSect},
+     * and tells the player what moved.
+     *
+     * <p>Deliberately not routed through {@link #addReputation}: that applies its own opposed-sect
+     * penalty, and the conduct table already says exactly what every sect thinks. Stacking the two
+     * would make the table a lie.
+     *
+     * <p>An outsider's gains stop just short of membership ({@link SectRank#regardGain}). Without
+     * that, a few fights would make you a disciple of a sect you never asked to join — past its
+     * realm floor, its allegiance check and its standing gate, none of which {@link #join} would
+     * have had the chance to apply.
      */
-    public static SectRank addRegard(ServerPlayer player, ResourceLocation id, int amount) {
-        int allowed = isMemberOf(player, id)
-                ? amount
-                : SectRank.regardGain(CultivationService.data(player).sectReputation(id), amount);
-        return addReputation(player, id, allowed);
+    public static void applyConduct(ServerPlayer player, ResourceLocation victimSect,
+                                    SectConduct.Outcome outcome) {
+        List<SectConduct.SectEntry> sects = registry(player).entrySet().stream()
+                .map(entry -> new SectConduct.SectEntry(entry.getKey().location(), entry.getValue().alignment()))
+                .sorted(Comparator.comparing(entry -> entry.id().toString()))
+                .toList();
+        Map<ResourceLocation, Integer> deltas =
+                SectConduct.deltas(outcome, victimSect, sects, SectConduct.Tuning.fromConfig());
+        if (deltas.isEmpty()) {
+            return;
+        }
+
+        CultivationData data = CultivationService.data(player);
+        deltas.forEach((id, amount) -> {
+            SectRank before = rankIn(player, id);
+            int applied = before.isMember() ? amount : SectRank.regardGain(data.sectReputation(id), amount);
+            if (applied == 0) {
+                return;
+            }
+            data.addSectReputation(id, applied);
+            byId(player, id).ifPresent(sect -> {
+                player.sendSystemMessage(Component.translatable("murimcultivation.sect.conduct",
+                        sect.displayName(), (applied > 0 ? "+" : "") + applied));
+                SectRank after = rankIn(player, id);
+                if (after.ordinal() > before.ordinal()) {
+                    SystemNotifications.send(player, SystemNotification.sectPromoted(sect.displayName(),
+                            Component.translatable(after.translationKey())));
+                }
+            });
+        });
+        CultivationService.syncToClient(player);
     }
 
     /**

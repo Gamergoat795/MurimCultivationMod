@@ -7,6 +7,8 @@ import com.andymods.murimcultivation.cultivation.AttributeGrant;
 import com.andymods.murimcultivation.cultivation.CultivationService;
 import com.andymods.murimcultivation.cultivation.QiDensity;
 import com.andymods.murimcultivation.cultivation.Realm;
+import com.andymods.murimcultivation.sect.SectConduct;
+import com.andymods.murimcultivation.sect.SectService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -111,6 +113,13 @@ public class WanderingWarriorEntity extends PathfinderMob {
     /** Set by the first blow against it while yielded, so later blows are not each a new ambush. */
     private boolean struckWhileYielded;
 
+    /** Whoever struck it first without asking, while that fight lasts. They can beat it to a yield too. */
+    private UUID ambushedBy;
+
+    /** Who it yielded to, and whether that was a fair fight — what the sects judge when it ends. */
+    private UUID victor;
+    private boolean victorFoughtFairly;
+
     public WanderingWarriorEntity(EntityType<? extends WanderingWarriorEntity> type, Level level) {
         super(type, level);
     }
@@ -185,6 +194,8 @@ public class WanderingWarriorEntity extends PathfinderMob {
         this.truceTicks = 0;
         this.yielded = false;
         this.struckWhileYielded = false;
+        this.ambushedBy = null;
+        this.victor = null;
         setTarget(opponent);
     }
 
@@ -197,6 +208,7 @@ public class WanderingWarriorEntity extends PathfinderMob {
      */
     public void standDown(int ticks, boolean yielded) {
         this.duelOpponent = null;
+        this.ambushedBy = null;
         this.truceTicks = Math.max(0, ticks);
         this.yielded = yielded;
         this.struckWhileYielded = false;
@@ -219,6 +231,34 @@ public class WanderingWarriorEntity extends PathfinderMob {
      *       the attacker, and having a target means later blows are part of the fight.</li>
      * </ul>
      */
+    /**
+     * Yields to the player who beat it, remembering whether they had asked first.
+     *
+     * <p>What happens next is decided by what that player does during the truce. Leave it be and,
+     * when the truce lapses, it has been spared; kill it and it has not. Either way the sects hear
+     * of it — see {@code SectConduct}.
+     */
+    public void yieldTo(Player winner, boolean fairFight, int ticks) {
+        standDown(ticks, true);
+        this.victor = winner.getUUID();
+        this.victorFoughtFairly = fairFight;
+    }
+
+    /** Whether this player struck it without a challenge, and it has been fighting them since. */
+    public boolean wasAmbushedBy(Player player) {
+        return ambushedBy != null && ambushedBy.equals(player.getUUID()) && !isInTruce();
+    }
+
+    /** Whether this player is the one it yielded to. */
+    public boolean yieldedTo(Player player) {
+        return victor != null && victor.equals(player.getUUID());
+    }
+
+    /** Whether the fight it yielded in was one it had agreed to. */
+    public boolean yieldedInFairFight() {
+        return victorFoughtFairly;
+    }
+
     public boolean provoke(Player attacker) {
         if (hasYielded()) {
             if (struckWhileYielded) {
@@ -229,6 +269,8 @@ public class WanderingWarriorEntity extends PathfinderMob {
         }
         truceTicks = 0;
         yielded = false;
+        victor = null;
+        ambushedBy = attacker.getUUID();
         setTarget(attacker);
         return true;
     }
@@ -320,10 +362,34 @@ public class WanderingWarriorEntity extends PathfinderMob {
             setLastHurtByMob(null);
             if (truceTicks == 0) {
                 // Recovered. It will fight again if provoked, and is no longer a defenceless kill.
+                if (yielded) {
+                    resolveSpared();
+                }
                 yielded = false;
                 struckWhileYielded = false;
+                victor = null;
             }
         }
+    }
+
+    /**
+     * The truce ran out and it is still alive: whoever beat it chose to spare it.
+     *
+     * <p>Judged at the end of the truce rather than at the yield, because until then the winner can
+     * still change their mind — and the sects care about what they finally did.
+     */
+    private void resolveSpared() {
+        if (victor == null || sect.isEmpty() || getServer() == null) {
+            return;
+        }
+        ServerPlayer winner = getServer().getPlayerList().getPlayer(victor);
+        if (winner == null) {
+            return;
+        }
+        if (victorFoughtFairly) {
+            say(winner, "murimcultivation.warrior.spared_thanks");
+        }
+        SectService.applyConduct(winner, sect.get(), SectConduct.Outcome.of(victorFoughtFairly, false));
     }
 
     private boolean opponentStillPresent() {
