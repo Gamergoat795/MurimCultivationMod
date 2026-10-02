@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 
 import java.util.Comparator;
 import java.util.List;
@@ -40,6 +41,12 @@ public final class SectService {
 
     public static Registry<Sect> registry(Player player) {
         return player.level().registryAccess().registryOrThrow(MurimRegistries.SECT);
+    }
+
+    /** For callers with a level but no player, such as an NPC naming itself. */
+    public static Optional<Sect> byId(Level level, ResourceLocation id) {
+        return level.registryAccess().registryOrThrow(MurimRegistries.SECT)
+                .getOptional(ResourceKey.create(MurimRegistries.SECT, id));
     }
 
     public static Optional<Sect> byId(Player player, ResourceLocation id) {

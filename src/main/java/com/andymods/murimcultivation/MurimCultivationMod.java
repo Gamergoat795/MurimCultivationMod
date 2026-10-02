@@ -86,6 +86,11 @@ public class MurimCultivationMod {
                     Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                     WanderingWarriorEntity::checkSpawnRules,
                     RegisterSpawnPlacementsEvent.Operation.REPLACE);
+            event.register(ModEntities.MARTIAL_ARTIST.get(),
+                    SpawnPlacementTypes.ON_GROUND,
+                    Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    MartialArtistEntity::checkSpawnRules,
+                    RegisterSpawnPlacementsEvent.Operation.REPLACE);
         }
 
         @SubscribeEvent

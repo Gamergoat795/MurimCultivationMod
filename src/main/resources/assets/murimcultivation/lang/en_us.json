@@ -298,8 +298,8 @@
   "murimcultivation.pill.deviation_remedy.wasted": "Your Qi runs smoothly. Save it.",
   "murimcultivation.pill.purity.description": "Refines your foundation by %s purity.",
   "murimcultivation.pill.purity.wasted": "Your foundation is already flawless.",
-  "entity.murimcultivation.martial_artist": "Martial Artist",
-  "item.murimcultivation.martial_artist_spawn_egg": "Martial Artist Spawn Egg",
+  "entity.murimcultivation.martial_artist": "Sect Envoy",
+  "item.murimcultivation.martial_artist_spawn_egg": "Sect Envoy Spawn Egg",
   "entity.murimcultivation.wandering_warrior": "Wandering Warrior",
   "item.murimcultivation.wandering_warrior_spawn_egg": "Wandering Warrior Spawn Egg",
   "murimcultivation.warrior_tier.thug": "Thug",
@@ -326,9 +326,14 @@
   "murimcultivation.warrior.spared_thanks": "\"You could have ended it. I will not forget that.\"",
   "murimcultivation.npc.prefix": "<%s> %s",
   "murimcultivation.npc.no_sect": "I serve no one you would know.",
-  "murimcultivation.npc.not_a_member": "You are not of the %s. Earn your place first.",
   "murimcultivation.npc.nothing_left": "I have nothing left to teach you.",
   "murimcultivation.npc.rise_further": "Rise to %s and return to me.",
   "murimcultivation.npc.unknown_art": "The art I would teach has been lost.",
-  "murimcultivation.npc.taught": "Then learn this: %s."
+  "murimcultivation.npc.taught": "Then learn this: %s.",
+  "murimcultivation.npc.envoy_name": "Envoy \u00b7 %s",
+  "murimcultivation.npc.offer_oath": "You would join the %s? Speak to me again, and you swear yourself to us.",
+  "murimcultivation.npc.welcome": "Then you are one of us. Welcome to the %s.",
+  "murimcultivation.npc.refused": "%s",
+  "murimcultivation.npc.standing": "You are %s. Your standing is %s; %s makes you %s.",
+  "murimcultivation.npc.standing_top": "You are %s. There is no higher seat."
 }

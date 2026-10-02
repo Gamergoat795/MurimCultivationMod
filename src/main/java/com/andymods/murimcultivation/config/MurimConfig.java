@@ -90,6 +90,7 @@ public final class MurimConfig {
         private final ModConfigSpec.IntValue standingDemonicInfamyRequired;
         private final ModConfigSpec.BooleanValue warriorNaturalSpawns;
         private final ModConfigSpec.IntValue warriorMaxNearby;
+        private final ModConfigSpec.BooleanValue envoyNaturalSpawns;
         private final ModConfigSpec.IntValue warriorQiRichPressure;
         private final ModConfigSpec.IntValue warriorNeutralPressure;
         private final ModConfigSpec.IntValue warriorQiBarrenPressure;
@@ -525,6 +526,13 @@ public final class MurimConfig {
                             "monster cap. The road should have a stranger on it, not a crowd.")
                     .defineInRange("maxNearby", 2, 1, 64);
 
+            envoyNaturalSpawns = builder
+                    .comment("Whether sect envoys appear on their own. They are rare, never despawn,",
+                            "and keep 128 blocks from each other. Until sect compounds exist they are",
+                            "the only way a player without operator rights can join a sect, so",
+                            "turning this off means placing envoys by hand with the spawn egg.")
+                    .define("envoyNaturalSpawns", true);
+
             warriorQiRichPressure = builder
                     .comment("Pressure floor in a biome tagged #murimcultivation:qi_rich. Higher than",
                             "neutral because warriors train where the Qi is good, so the bamboo",
@@ -883,6 +891,10 @@ public final class MurimConfig {
 
     public static boolean warriorNaturalSpawns() {
         return VALUES.warriorNaturalSpawns.get();
+    }
+
+    public static boolean envoyNaturalSpawns() {
+        return VALUES.envoyNaturalSpawns.get();
     }
 
     public static int warriorMaxNearby() {

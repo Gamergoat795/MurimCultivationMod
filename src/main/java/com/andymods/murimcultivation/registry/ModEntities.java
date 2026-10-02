@@ -16,15 +16,16 @@ public final class ModEntities {
             DeferredRegister.create(Registries.ENTITY_TYPE, MurimCultivationMod.MODID);
 
     /**
-     * A sect martial artist.
+     * A sect's envoy (the class keeps its first name, martial artist).
      *
-     * <p>{@code MobCategory.MISC} rather than {@code CREATURE} deliberately: natural spawning is
-     * not wanted, since these belong in sect compounds that a later milestone will generate, not
-     * scattered across the countryside.
+     * <p>{@code MobCategory.CREATURE}: placed mostly as chunks generate and then kept, which is the
+     * right shape for a rare fixture rather than a recurring encounter. It used to be {@code MISC},
+     * with no natural spawning, on the theory that sect compounds would house them — but that left
+     * no way to join a sect without operator rights until compounds exist.
      */
     public static final DeferredHolder<EntityType<?>, EntityType<MartialArtistEntity>> MARTIAL_ARTIST =
             ENTITIES.register("martial_artist", () -> EntityType.Builder
-                    .of(MartialArtistEntity::new, MobCategory.MISC)
+                    .of(MartialArtistEntity::new, MobCategory.CREATURE)
                     .sized(0.6F, 1.95F)
                     .clientTrackingRange(10)
                     .build("martial_artist"));
